@@ -31,11 +31,18 @@ class SimpleSpeedTest:
         ]
     }
     
-    def __init__(self):
+    def __init__(self, log_callback=None):
         """初始化"""
         self.download_speed = 0.0
         self.upload_speed = 0.0
         self.ping_time = 0.0
+        self._log_callback = log_callback
+        
+    def _log(self, message: str):
+        """输出日志"""
+        print(message)
+        if self._log_callback:
+            self._log_callback(message)
         
     def test_download(self, test_duration: int = 10) -> Optional[float]:
         """
@@ -47,30 +54,30 @@ class SimpleSpeedTest:
         Returns:
             Optional[float]: 下载速度(Mbps)
         """
-        print(f"[下载测试] 开始测试下载速度...")
+        self._log(f"[下载测试] 开始测试下载速度...")
         
         # 使用多个URL测试
         speeds = []
         
         for url, size, name in self.TEST_URLS['download'][:2]:  # 使用前2个URL
             try:
-                print(f"[下载测试] 正在从 {name} 下载测试...")
+                self._log(f"[下载测试] 正在从 {name} 下载测试...")
                 speed = self._test_download_single(url, test_duration)
                 if speed > 0:
                     speeds.append(speed)
-                    print(f"[下载测试] {name}: {speed:.2f} Mbps")
+                    self._log(f"[下载测试] {name}: {speed:.2f} Mbps")
             except Exception as e:
-                print(f"[下载测试] {name} 测试失败: {e}")
+                self._log(f"[下载测试] {name} 测试失败: {e}")
                 continue
         
         if speeds:
             # 取平均值
             avg_speed = sum(speeds) / len(speeds)
             self.download_speed = round(avg_speed, 3)
-            print(f"[下载测试] 平均下载速度: {self.download_speed} Mbps ({self.download_speed / 8:.2f} MB/s)")
+            self._log(f"[下载测试] 平均下载速度: {self.download_speed} Mbps ({self.download_speed / 8:.2f} MB/s)")
             return self.download_speed
         else:
-            print(f"[下载测试] 所有测试都失败")
+            self._log(f"[下载测试] 所有测试都失败")
             return None
             
     def _test_download_single(self, url: str, duration: int = 10) -> float:
