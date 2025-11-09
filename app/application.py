@@ -22,7 +22,7 @@ class SpeedTestApp(QApplication):
         
         # 设置应用程序信息
         self.setApplicationName("网速测试工具")
-        self.setApplicationVersion("0.0.3")
+        self.setApplicationVersion("0.0.4")
         self.setOrganizationName("SpeedTest")
         
         # 设置应用程序样式
