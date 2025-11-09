@@ -17,17 +17,28 @@ class SimpleSpeedTest:
     # 国内测速文件URL（使用CDN和大文件）
     TEST_URLS = {
         'download': [
-            # 阿里云CDN测试文件
-            ('https://speed.cloudflare.com/__down?bytes=10000000', '10MB', '阿里云CDN'),
+            # 阿里云CDN
+            ('https://mirrors.aliyun.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '阿里云镜像站'),
             # 腾讯云CDN
-            ('https://dldir1.qq.com/qqfile/qq/PCQQ9.7.8/QQ9.7.8.29225.exe', '200MB', '腾讯QQ下载'),
-            # 网易云音乐
-            ('http://m10.music.126.net/20231010/test.mp3', '5MB', '网易云音乐'),
+            ('https://dldir1.qq.com/qqfile/qq/PCQQ9.7.17/QQ9.7.17.29225.exe', '200MB', '腾讯QQ下载'),
+            # 网易云CDN
+            ('https://mirrors.163.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '网易镜像站'),
+            # 华为云CDN
+            ('https://mirrors.huaweicloud.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '华为云镜像站'),
+            # 清华大学镜像站
+            ('https://mirrors.tuna.tsinghua.edu.cn/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '清华大学镜像站'),
+            # 中国科技大学镜像站
+            ('https://mirrors.ustc.edu.cn/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '中科大镜像站'),
+            # 搜狐CDN
+            ('http://mirrors.sohu.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '搜狐镜像站'),
+            # 百度云盘分享（公开文件）
+            ('https://issuecdn.baidupcs.com/issue/netdisk/yunguanjia/BaiduNetdisk_7.17.0.12.exe', '100MB', '百度网盘客户端'),
         ],
         'upload': [
-            # 使用httpbin.org的POST接口
+            # 使用国内测试接口
             ('https://httpbin.org/post', 'httpbin'),
             ('https://postman-echo.com/post', 'postman-echo'),
+            ('http://httpbin.org/post', 'httpbin-http'),
         ]
     }
     
@@ -59,7 +70,7 @@ class SimpleSpeedTest:
         # 使用多个URL测试
         speeds = []
         
-        for url, size, name in self.TEST_URLS['download'][:2]:  # 使用前2个URL
+        for url, size, name in self.TEST_URLS['download'][:3]:  # 使用前3个URL
             try:
                 self._log(f"[下载测试] 正在从 {name} 下载测试...")
                 speed = self._test_download_single(url, test_duration)
@@ -173,15 +184,21 @@ class SimpleSpeedTest:
             Optional[Dict]: Ping结果字典
         """
         if hosts is None:
-            # 使用国内常用服务
+            # 使用国内常用服务和CDN
             hosts = [
                 ('www.baidu.com', '百度'),
                 ('www.qq.com', '腾讯'),
                 ('www.taobao.com', '淘宝'),
                 ('www.163.com', '网易'),
+                ('www.jd.com', '京东'),
+                ('www.aliyun.com', '阿里云'),
+                ('cloud.tencent.com', '腾讯云'),
+                ('www.huaweicloud.com', '华为云'),
+                ('www.bilibili.com', '哔哩哔哩'),
+                ('www.douyin.com', '抖音'),
             ]
         
-        print(f"[Ping测试] 开始测试 {len(hosts)} 个网站的延迟...")
+        self._log(f"[Ping测试] 开始测试 {len(hosts)} 个网站的延迟...")
         
         results = {}
         valid_pings = []
@@ -192,20 +209,20 @@ class SimpleSpeedTest:
             
             if ping_time is not None:
                 valid_pings.append(ping_time)
-                print(f"[Ping测试] {name} ({host}): {ping_time:.1f} ms")
+                self._log(f"[Ping测试] {name} ({host}): {ping_time:.1f} ms")
             else:
-                print(f"[Ping测试] {name} ({host}): 超时")
+                self._log(f"[Ping测试] {name} ({host}): 超时")
         
         if valid_pings:
             avg_ping = round(sum(valid_pings) / len(valid_pings), 1)
             min_ping = round(min(valid_pings), 1)
             max_ping = round(max(valid_pings), 1)
             
-            print(f"[Ping测试] 统计结果:")
-            print(f"  - 平均延迟: {avg_ping} ms")
-            print(f"  - 最小延迟: {min_ping} ms")
-            print(f"  - 最大延迟: {max_ping} ms")
-            print(f"  - 成功率: {len(valid_pings)}/{len(hosts)}")
+            self._log(f"[Ping测试] 统计结果:")
+            self._log(f"  - 平均延迟: {avg_ping} ms")
+            self._log(f"  - 最小延迟: {min_ping} ms")
+            self._log(f"  - 最大延迟: {max_ping} ms")
+            self._log(f"  - 成功率: {len(valid_pings)}/{len(hosts)}")
             
             self.ping_time = avg_ping
             
@@ -218,7 +235,7 @@ class SimpleSpeedTest:
                 'total_count': len(hosts)
             }
         else:
-            print(f"[Ping测试] 所有主机都无法访问")
+            self._log(f"[Ping测试] 所有主机都无法访问")
             return None
             
     def _ping_http(self, host: str) -> Optional[float]:
