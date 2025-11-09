@@ -9,6 +9,7 @@ import subprocess
 import platform
 from datetime import datetime
 from typing import Dict, Optional, List
+from .simple_speedtest import SimpleSpeedTest
 
 
 class SpeedTestModel:
@@ -57,6 +58,8 @@ class SpeedTestModel:
         self._speedtest_instance: Optional[speedtest.Speedtest] = None
         self._server_info: Optional[Dict] = None
         self._last_results: Dict = {}
+        self._simple_speedtest: Optional[SimpleSpeedTest] = None
+        self._use_simple_mode: bool = False  # 是否使用简单模式
         
     def initialize(self) -> bool:
         """
@@ -74,7 +77,7 @@ class SpeedTestModel:
             
     def get_servers(self, use_china_servers: bool = True) -> bool:
         """
-        获取服务器列表（优先使用预配置的国内服务器）
+        获取服务器列表（优先使用预配置的国内服务器，失败则切换到简单模式）
         
         Args:
             use_china_servers: 是否使用预配置的国内服务器
@@ -148,15 +151,20 @@ class SpeedTestModel:
                             if shown < 5:
                                 print(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
                                 shown += 1
-                else:
-                    print(f"[测速服务器] 未找到中国服务器，使用全球服务器")
+                    return True
             
+            # 如果所有方法都失败，切换到简单模式
+            print(f"[测速服务器] speedtest-cli无法获取服务器，切换到简单HTTP测速模式")
+            self._use_simple_mode = True
+            self._simple_speedtest = SimpleSpeedTest()
             return True
+            
         except Exception as e:
             print(f"[测速服务器] 获取服务器列表失败: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
+            print(f"[测速服务器] 切换到简单HTTP测速模式")
+            self._use_simple_mode = True
+            self._simple_speedtest = SimpleSpeedTest()
+            return True
             
     def select_best_server(self) -> Optional[Dict]:
         """
@@ -191,6 +199,10 @@ class SpeedTestModel:
         Returns:
             Optional[float]: 下载速度(Mbps)，失败返回None
         """
+        # 使用简单模式
+        if self._use_simple_mode and self._simple_speedtest:
+            return self._simple_speedtest.test_download()
+            
         if not self._speedtest_instance:
             return None
             
@@ -214,6 +226,10 @@ class SpeedTestModel:
         Returns:
             Optional[float]: 上传速度(Mbps)，失败返回None
         """
+        # 使用简单模式
+        if self._use_simple_mode and self._simple_speedtest:
+            return self._simple_speedtest.test_upload()
+            
         if not self._speedtest_instance:
             return None
             
@@ -261,6 +277,10 @@ class SpeedTestModel:
         Returns:
             Optional[Dict]: 包含各主机延迟和平均值的字典
         """
+        # 使用简单模式
+        if self._use_simple_mode and self._simple_speedtest:
+            return self._simple_speedtest.test_ping()
+            
         if hosts is None:
             # 国内常用服务器
             hosts = [
