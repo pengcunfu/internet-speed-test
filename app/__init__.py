@@ -6,6 +6,6 @@ Internet Speed Test Application Package
 
 from .application import SpeedTestApp
 
-__version__ = '2.1'
-__author__ = 'Your Name'
+__version__ = '0.0.2'
+__author__ = 'pengcunfu'
 __all__ = ['SpeedTestApp']
