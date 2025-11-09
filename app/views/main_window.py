@@ -12,6 +12,7 @@ from PySide6.QtGui import QFont, QPalette, QColor, QIcon
 from ..controllers.speedtest_controller import SpeedTestController
 from ..controllers.ip_controller import IPController
 from .result_dialog import ResultDialog
+from .chart_dialog import ChartDialog
 
 
 class MainWindow(QMainWindow):
@@ -25,11 +26,12 @@ class MainWindow(QMainWindow):
         self.speedtest_controller = SpeedTestController()
         self.ip_controller = IPController()
         
+        # 当前对话框引用
+        self._current_dialog = None
+        self._current_result = None  # 保存当前测速结果
+        
         # 连接控制器信号
         self._connect_controller_signals()
-        
-        # 当前结果对话框
-        self._current_dialog = None
         
         # 设置窗口
         self.setWindowTitle('网速测试工具 - Internet Speed Test')
@@ -152,6 +154,7 @@ class MainWindow(QMainWindow):
         
         # 底部按钮
         bottom_layout = QHBoxLayout()
+        self.chart_btn = QPushButton("📊 查看图表")
         self.help_btn = QPushButton("帮助")
         self.close_btn = QPushButton("退出")
         
@@ -172,9 +175,12 @@ class MainWindow(QMainWindow):
         }
         """
         
+        self.chart_btn.setStyleSheet(bottom_button_style)
         self.help_btn.setStyleSheet(bottom_button_style)
         self.close_btn.setStyleSheet(bottom_button_style)
+        self.chart_btn.setEnabled(False)  # 初始禁用
         
+        bottom_layout.addWidget(self.chart_btn)
         bottom_layout.addWidget(self.help_btn)
         bottom_layout.addStretch()
         bottom_layout.addWidget(self.close_btn)
@@ -197,7 +203,8 @@ class MainWindow(QMainWindow):
         self.both_btn.clicked.connect(lambda: self._start_speed_test('both'))
         self.ping_btn.clicked.connect(lambda: self._start_speed_test('ping'))
         self.ip_info_btn.clicked.connect(self._show_ip_menu)
-        self.help_btn.clicked.connect(self._show_help_menu)
+        self.chart_btn.clicked.connect(self._show_chart)
+        self.help_btn.clicked.connect(self._show_help)
         self.close_btn.clicked.connect(self.close)
         
     def _start_speed_test(self, test_type: str):
@@ -256,7 +263,22 @@ class MainWindow(QMainWindow):
         """测试完成处理"""
         if self._current_dialog:
             self._current_dialog.show_result(self._format_speed_test_result(result))
+            
+            # 添加显示图表按钮
+            if 'download' in result or 'upload' in result or 'ping_details' in result:
+                self._current_result = result  # 保存结果用于图表显示
+                self.chart_btn.setEnabled(True)  # 启用图表按钮
+                
         self._set_buttons_enabled(True)
+        
+    def _show_chart(self):
+        """显示图表"""
+        if self._current_result:
+            try:
+                chart_dialog = ChartDialog(self, self._current_result)
+                chart_dialog.exec()
+            except Exception as e:
+                QMessageBox.warning(self, "错误", f"显示图表失败: {str(e)}")
         
     def _on_test_failed(self, error_msg: str):
         """测试失败处理"""
