@@ -116,10 +116,12 @@ class SpeedTestWorker(QThread):
             self.error.emit(f"测试过程出错: {str(e)}")
             
     def stop(self):
-        """停止线程"""
+        """停止线程（立即强制停止）"""
         self._is_running = False
-        self.quit()
-        self.wait()
+        # 不等待线程结束，直接终止
+        if self.isRunning():
+            self.terminate()  # 强制终止线程
+            self.wait(100)  # 只等待100毫秒
 
 
 class SpeedTestController(QObject):

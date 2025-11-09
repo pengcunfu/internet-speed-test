@@ -129,7 +129,7 @@ class ResultDialog(QDialog):
         
         # 绑定事件
         self.copy_btn.clicked.connect(self._copy_info)
-        self.close_btn.clicked.connect(self.accept)
+        self.close_btn.clicked.connect(self._force_close)
         
     def update_progress(self, message: str):
         """
@@ -185,6 +185,13 @@ class ResultDialog(QDialog):
             QMessageBox.information(self, "提示", "信息已复制到剪贴板")
         except Exception as e:
             QMessageBox.warning(self, "错误", f"复制失败: {str(e)}")
+            
+    def _force_close(self):
+        """强制关闭对话框"""
+        # 发送关闭信号
+        self.dialog_closed.emit()
+        # 立即关闭
+        self.close()
             
     def closeEvent(self, event):
         """窗口关闭事件"""
