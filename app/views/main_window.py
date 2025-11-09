@@ -426,7 +426,7 @@ class MainWindow(QMainWindow):
         
     def _show_about(self):
         """显示关于"""
-        about_text = """网速测试工具 v0.0.2
+        about_text = """网速测试工具 v0.0.3
 
 基于Python和PySide6开发的网络速度测试工具。
 采用MVC设计模式，优化了性能和用户体验。
