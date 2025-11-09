@@ -14,23 +14,42 @@ from typing import Dict, Optional, List
 class SpeedTestModel:
     """网速测试模型类"""
     
-    # 国内主要测速服务器ID列表
-    CHINA_SERVERS = [
+    # 中国大陆主要测速服务器ID列表（排除香港、澳门、台湾）
+    CHINA_MAINLAND_SERVERS = [
+        # 上海
         3633,   # 中国电信 - 上海
-        5505,   # 中国联通 - 上海
+        5505,   # 中国联通 - 上海  
         5145,   # 中国移动 - 上海
+        24447,  # 上海电信
+        
+        # 北京
         4870,   # 中国电信 - 北京
         4713,   # 中国联通 - 北京
         4575,   # 中国移动 - 北京
+        
+        # 广州
         4647,   # 中国电信 - 广州
         6132,   # 中国联通 - 广州
         4515,   # 中国移动 - 广州
+        
+        # 深圳
         5017,   # 中国电信 - 深圳
         10201,  # 中国联通 - 深圳
         4884,   # 中国移动 - 深圳
+        
+        # 成都
         5083,   # 中国电信 - 成都
         5726,   # 中国联通 - 成都
         4624,   # 中国移动 - 成都
+        
+        # 杭州
+        5300,   # 中国电信 - 杭州
+        
+        # 南京
+        5396,   # 中国电信 - 南京
+        
+        # 武汉
+        5485,   # 中国电信 - 武汉
     ]
     
     def __init__(self):
@@ -68,10 +87,10 @@ class SpeedTestModel:
             
         try:
             if use_china_servers:
-                print(f"[测速服务器] 尝试使用预配置的 {len(self.CHINA_SERVERS)} 个国内服务器...")
+                print(f"[测速服务器] 尝试使用预配置的 {len(self.CHINA_MAINLAND_SERVERS)} 个中国大陆服务器...")
                 try:
-                    # 使用预配置的国内服务器ID
-                    self._speedtest_instance.get_servers(self.CHINA_SERVERS)
+                    # 使用预配置的中国大陆服务器ID
+                    self._speedtest_instance.get_servers(self.CHINA_MAINLAND_SERVERS)
                     
                     if hasattr(self._speedtest_instance, 'servers') and self._speedtest_instance.servers:
                         server_count = sum(len(s) for s in self._speedtest_instance.servers.values())
@@ -99,18 +118,28 @@ class SpeedTestModel:
                 total_count = sum(len(s) for s in all_servers.values())
                 print(f"[测速服务器] 获取到 {total_count} 个服务器")
                 
-                # 尝试筛选中国和香港服务器
+                # 只筛选中国大陆服务器，排除香港、澳门、台湾
                 filtered_servers = {}
                 for key, servers in all_servers.items():
-                    # 包含中国大陆和香港的服务器
-                    country_servers = [s for s in servers if s.get('cc', '') in ['CN', 'HK']]
-                    if country_servers:
-                        filtered_servers[key] = country_servers
+                    # 只要中国大陆的服务器
+                    mainland_servers = []
+                    for s in servers:
+                        cc = s.get('cc', '')
+                        country = s.get('country', '')
+                        name = s.get('name', '')
+                        # 只要 cc='CN' 且不是香港、澳门、台湾
+                        if cc == 'CN' and 'Hong Kong' not in country and 'Hong Kong' not in name and \
+                           'Macao' not in country and 'Macao' not in name and \
+                           'Taiwan' not in country and 'Taiwan' not in name:
+                            mainland_servers.append(s)
+                    
+                    if mainland_servers:
+                        filtered_servers[key] = mainland_servers
                 
                 if filtered_servers:
                     cn_count = sum(len(s) for s in filtered_servers.values())
                     self._speedtest_instance.servers = filtered_servers
-                    print(f"[测速服务器] 已筛选到 {cn_count} 个中国/香港服务器")
+                    print(f"[测速服务器] 已筛选到 {cn_count} 个中国大陆服务器")
                     
                     # 显示部分服务器
                     shown = 0
