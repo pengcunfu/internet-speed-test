@@ -1,6 +1,4 @@
 # 网速测试工具 - Internet Speed Test Tool
-# 网络工具集合
-
 
 基于Python和PySide6开发的现代化网络速度测试工具，提供直观的图形用户界面。
 

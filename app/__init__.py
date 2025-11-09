@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-App package for Internet Speed Test Tool
+Internet Speed Test Application Package
+网速测试应用程序包 - MVC架构版本
 """
 
-from .InternetSpeedTest import SpeedTestApp
+from .application import SpeedTestApp
 
+__version__ = '2.1'
+__author__ = 'Your Name'
 __all__ = ['SpeedTestApp']
