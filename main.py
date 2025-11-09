@@ -10,7 +10,7 @@ import os
 # 添加当前目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from InternetSpeedTest import SpeedTestApp
+from app.InternetSpeedTest import SpeedTestApp
 
 def main():
     """主函数"""

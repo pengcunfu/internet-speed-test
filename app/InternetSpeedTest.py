@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Internet Speed Test GUI Application
 网速测试图形界面应用程序 - PySide6版本
@@ -13,7 +13,7 @@ from PySide6.QtGui import QFont, QPalette, QColor, QIcon
 import speedtest
 import requests
 import webbrowser
-from ViewInfo import ViewInfoDialog
+from .ViewInfo import ViewInfoDialog
 
 class SpeedTestWindow(QMainWindow):
     """主窗口类"""
