@@ -195,10 +195,13 @@ class SimpleSpeedTest:
                 # 使用生成器流式上传
                 uploaded_bytes = 0
                 start_time = time.time()
+                last_log_time = start_time
+                last_uploaded = 0
                 
                 def data_generator():
-                    nonlocal uploaded_bytes
+                    nonlocal uploaded_bytes, last_log_time, last_uploaded
                     test_start = time.time()
+                    
                     while time.time() - test_start < duration:
                         # 使用下载的数据或生成新数据
                         if self._downloaded_data and len(self._downloaded_data) >= chunk_size:
@@ -206,6 +209,18 @@ class SimpleSpeedTest:
                         else:
                             chunk = b'0' * chunk_size
                         uploaded_bytes += len(chunk)
+                        
+                        # 每秒显示一次速度
+                        current_time = time.time()
+                        if current_time - last_log_time >= 1.0:
+                            elapsed = current_time - start_time
+                            bytes_in_second = uploaded_bytes - last_uploaded
+                            speed_mbps = (bytes_in_second * 8) / (current_time - last_log_time) / 1_000_000
+                            avg_speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
+                            self._log(f"[上传测试] 第{int(elapsed)}秒: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) | 平均: {avg_speed_mbps:.2f} Mbps")
+                            last_log_time = current_time
+                            last_uploaded = uploaded_bytes
+                        
                         yield chunk
                 
                 # 发送请求
@@ -213,9 +228,9 @@ class SimpleSpeedTest:
                 elapsed = time.time() - start_time
                 
                 if elapsed > 0 and uploaded_bytes > 0:
-                    # 计算速度
+                    # 计算最终平均速度
                     speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                    self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
+                    self._log(f"[上传测试] {name} 完成: 平均 {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
                     return speed_mbps
                     
             except requests.exceptions.Timeout:
@@ -223,7 +238,7 @@ class SimpleSpeedTest:
                 elapsed = time.time() - start_time
                 if elapsed > 0 and uploaded_bytes > 0:
                     speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                    self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 限时完成，上传了 {uploaded_bytes / (1024*1024):.2f} MB")
+                    self._log(f"[上传测试] {name} 限时完成: 平均 {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
                     return speed_mbps
             except Exception as e:
                 self._log(f"[上传测试] {name} 测试失败: {e}")
