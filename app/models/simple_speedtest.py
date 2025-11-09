@@ -46,6 +46,20 @@ class SimpleSpeedTest:
         self._temp_files = []  # 存储临时文件路径
         self._downloaded_data = None  # 存储下载的数据用于上传测试
         
+        # 详细统计信息
+        self.download_stats = {
+            'max': 0.0,
+            'min': 0.0,
+            'avg': 0.0,
+            'speeds': []
+        }
+        self.upload_stats = {
+            'max': 0.0,
+            'min': 0.0,
+            'avg': 0.0,
+            'speeds': []
+        }
+        
     def _log(self, message: str):
         """输出日志"""
         print(message)
@@ -79,10 +93,25 @@ class SimpleSpeedTest:
                 continue
         
         if speeds:
-            # 取平均值
+            # 计算统计信息
             avg_speed = sum(speeds) / len(speeds)
+            max_speed = max(speeds)
+            min_speed = min(speeds)
+            
             self.download_speed = round(avg_speed, 3)
-            self._log(f"[下载测试] 平均下载速度: {self.download_speed} Mbps ({self.download_speed / 8:.2f} MB/s)")
+            self.download_stats = {
+                'max': round(max_speed, 3),
+                'min': round(min_speed, 3),
+                'avg': round(avg_speed, 3),
+                'speeds': speeds
+            }
+            
+            # 显示详细统计
+            self._log(f"[下载测试] ========== 下载速度统计 ==========")
+            self._log(f"[下载测试] 最高速度: {max_speed:.2f} Mbps ({max_speed / 8:.2f} MB/s)")
+            self._log(f"[下载测试] 最低速度: {min_speed:.2f} Mbps ({min_speed / 8:.2f} MB/s)")
+            self._log(f"[下载测试] 平均速度: {avg_speed:.2f} Mbps ({avg_speed / 8:.2f} MB/s)")
+            self._log(f"[下载测试] =====================================")
             return self.download_speed
         else:
             self._log(f"[下载测试] 所有测试都失败")
@@ -164,27 +193,30 @@ class SimpleSpeedTest:
         
         speeds = []
         
-        for url, name in self.TEST_URLS['upload'][:1]:  # 只使用第一个URL
-            try:
-                self._log(f"[上传测试] 正在向 {name} 上传测试...")
-                
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                }
-                
-                start_time = time.time()
-                response = requests.post(url, data=test_data, timeout=30, headers=headers)
-                elapsed = time.time() - start_time
-                
-                if response.status_code == 200 and elapsed > 0:
-                    # 计算速度
-                    speed_mbps = (len(test_data) * 8) / elapsed / 1_000_000
-                    speeds.append(speed_mbps)
-                    self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps")
+        # 多次上传测试以获得更准确的统计
+        test_count = 3  # 测试3次
+        for i in range(test_count):
+            for url, name in self.TEST_URLS['upload'][:1]:  # 只使用第一个URL
+                try:
+                    self._log(f"[上传测试] 第{i+1}次向 {name} 上传测试...")
                     
-            except Exception as e:
-                self._log(f"[上传测试] {name} 测试失败: {e}")
-                continue
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                    
+                    start_time = time.time()
+                    response = requests.post(url, data=test_data, timeout=30, headers=headers)
+                    elapsed = time.time() - start_time
+                    
+                    if response.status_code == 200 and elapsed > 0:
+                        # 计算速度
+                        speed_mbps = (len(test_data) * 8) / elapsed / 1_000_000
+                        speeds.append(speed_mbps)
+                        self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s)")
+                        
+                except Exception as e:
+                    self._log(f"[上传测试] {name} 测试失败: {e}")
+                    continue
         
         # 上传完成后清理下载的数据
         if self._downloaded_data:
@@ -192,9 +224,25 @@ class SimpleSpeedTest:
             self._downloaded_data = None
         
         if speeds:
+            # 计算统计信息
             avg_speed = sum(speeds) / len(speeds)
+            max_speed = max(speeds)
+            min_speed = min(speeds)
+            
             self.upload_speed = round(avg_speed, 3)
-            self._log(f"[上传测试] 平均上传速度: {self.upload_speed} Mbps ({self.upload_speed / 8:.2f} MB/s)")
+            self.upload_stats = {
+                'max': round(max_speed, 3),
+                'min': round(min_speed, 3),
+                'avg': round(avg_speed, 3),
+                'speeds': speeds
+            }
+            
+            # 显示详细统计
+            self._log(f"[上传测试] ========== 上传速度统计 ==========")
+            self._log(f"[上传测试] 最高速度: {max_speed:.2f} Mbps ({max_speed / 8:.2f} MB/s)")
+            self._log(f"[上传测试] 最低速度: {min_speed:.2f} Mbps ({min_speed / 8:.2f} MB/s)")
+            self._log(f"[上传测试] 平均速度: {avg_speed:.2f} Mbps ({avg_speed / 8:.2f} MB/s)")
+            self._log(f"[上传测试] =====================================")
             return self.upload_speed
         else:
             self._log(f"[上传测试] 所有测试都失败")

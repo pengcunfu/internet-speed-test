@@ -83,6 +83,9 @@ class SpeedTestWorker(QThread):
                     self.error.emit("下载速度测试失败")
                     return
                 result['download'] = download_speed
+                # 添加下载统计信息
+                if hasattr(self.model, '_simple_speedtest') and self.model._simple_speedtest:
+                    result['download_stats'] = self.model._simple_speedtest.download_stats
                 
                 if not self._is_running:
                     return
@@ -94,6 +97,9 @@ class SpeedTestWorker(QThread):
                     self.error.emit("上传速度测试失败")
                     return
                 result['upload'] = upload_speed
+                # 添加上传统计信息
+                if hasattr(self.model, '_simple_speedtest') and self.model._simple_speedtest:
+                    result['upload_stats'] = self.model._simple_speedtest.upload_stats
                 
                 if not self._is_running:
                     return
