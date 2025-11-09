@@ -129,5 +129,16 @@ class SpeedTestModel:
         
     def reset(self):
         """重置模型状态"""
+        if self._simple_speedtest:
+            self._simple_speedtest.cleanup()
         self._simple_speedtest = None
         self._last_results.clear()
+        
+    def cleanup(self):
+        """清理资源"""
+        if self._simple_speedtest:
+            self._simple_speedtest.cleanup()
+            
+    def __del__(self):
+        """析构函数"""
+        self.cleanup()

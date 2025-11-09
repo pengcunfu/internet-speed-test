@@ -7,6 +7,8 @@ Simple SpeedTest Implementation
 import time
 import requests
 import threading
+import tempfile
+import os
 from typing import Optional, Dict
 from datetime import datetime
 
@@ -41,6 +43,8 @@ class SimpleSpeedTest:
         self.upload_speed = 0.0
         self.ping_time = 0.0
         self._log_callback = log_callback
+        self._temp_files = []  # 存储临时文件路径
+        self._downloaded_data = None  # 存储下载的数据用于上传测试
         
     def _log(self, message: str):
         """输出日志"""
@@ -97,6 +101,7 @@ class SimpleSpeedTest:
         """
         start_time = time.time()
         downloaded = 0
+        downloaded_chunks = []  # 保存下载的数据块
         
         try:
             # 添加User-Agent避免被拦截
@@ -109,6 +114,7 @@ class SimpleSpeedTest:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     downloaded += len(chunk)
+                    downloaded_chunks.append(chunk)  # 保存数据块
                     
                 # 检查是否超时
                 elapsed = time.time() - start_time
@@ -117,6 +123,10 @@ class SimpleSpeedTest:
             
             elapsed = time.time() - start_time
             if elapsed > 0 and downloaded > 0:
+                # 保存下载的数据用于上传测试
+                self._downloaded_data = b''.join(downloaded_chunks)
+                self._log(f"[下载测试] 已保存 {len(self._downloaded_data) / (1024*1024):.2f} MB 数据用于上传测试")
+                
                 # 计算速度: (字节数 * 8) / 时间 / 1,000,000 = Mbps
                 speed_mbps = (downloaded * 8) / elapsed / 1_000_000
                 return speed_mbps
@@ -137,15 +147,20 @@ class SimpleSpeedTest:
         测试上传速度
         
         Args:
-            test_size_mb: 测试数据大小(MB)，默认1MB
+            test_size_mb: 测试数据大小(MB)，默认1MB（如果有下载数据则使用下载数据）
             
         Returns:
             Optional[float]: 上传速度(Mbps)
         """
         self._log(f"[上传测试] 开始测试上传速度...")
         
-        # 生成测试数据（减小到1MB）
-        test_data = b'0' * (test_size_mb * 1024 * 1024)
+        # 使用下载的数据或生成新数据
+        if self._downloaded_data and len(self._downloaded_data) > 0:
+            test_data = self._downloaded_data
+            self._log(f"[上传测试] 使用下载的 {len(test_data) / (1024*1024):.2f} MB 数据进行上传测试")
+        else:
+            test_data = b'0' * (test_size_mb * 1024 * 1024)
+            self._log(f"[上传测试] 使用生成的 {test_size_mb} MB 数据进行上传测试")
         
         speeds = []
         
@@ -170,6 +185,11 @@ class SimpleSpeedTest:
             except Exception as e:
                 self._log(f"[上传测试] {name} 测试失败: {e}")
                 continue
+        
+        # 上传完成后清理下载的数据
+        if self._downloaded_data:
+            self._log(f"[上传测试] 清理下载数据...")
+            self._downloaded_data = None
         
         if speeds:
             avg_speed = sum(speeds) / len(speeds)
@@ -269,6 +289,16 @@ class SimpleSpeedTest:
             pass
             
         return None
+        
+    def cleanup(self):
+        """清理临时数据"""
+        if self._downloaded_data:
+            self._log(f"[清理] 释放下载数据 ({len(self._downloaded_data) / (1024*1024):.2f} MB)")
+            self._downloaded_data = None
+            
+    def __del__(self):
+        """析构函数，确保清理"""
+        self.cleanup()
         
     def get_results(self) -> Dict:
         """
