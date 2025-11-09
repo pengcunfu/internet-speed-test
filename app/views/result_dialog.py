@@ -136,7 +136,23 @@ class ResultDialog(QDialog):
             message: 进度消息
         """
         self.title_label.setText(message)
-        self.info_text.setText(f"{message}\n\n请耐心等待...")
+        
+    def append_log(self, log_message: str):
+        """
+        追加日志信息
+        
+        Args:
+            log_message: 日志消息
+        """
+        current_text = self.info_text.toPlainText()
+        if current_text:
+            self.info_text.setText(current_text + "\n" + log_message)
+        else:
+            self.info_text.setText(log_message)
+        
+        # 滚动到底部
+        scrollbar = self.info_text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
         
     def show_result(self, result: str):
         """

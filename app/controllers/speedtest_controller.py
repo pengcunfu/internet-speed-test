@@ -14,6 +14,7 @@ class SpeedTestWorker(QThread):
     
     # 信号定义
     progress = Signal(str)  # 进度更新
+    log = Signal(str)  # 日志信息
     finished = Signal(dict)  # 完成信号，传递结果字典
     error = Signal(str)  # 错误信号
     
@@ -26,8 +27,12 @@ class SpeedTestWorker(QThread):
         """
         super().__init__()
         self.test_type = test_type
-        self.model = SpeedTestModel()
+        self.model = SpeedTestModel(log_callback=self._emit_log)
         self._is_running = True
+        
+    def _emit_log(self, message: str):
+        """发送日志信号"""
+        self.log.emit(message)
         
     def run(self):
         """线程运行函数"""
@@ -122,6 +127,7 @@ class SpeedTestController(QObject):
     
     # 信号定义
     progress_updated = Signal(str)
+    log_updated = Signal(str)  # 日志更新信号
     test_completed = Signal(dict)
     test_failed = Signal(str)
     
@@ -146,6 +152,7 @@ class SpeedTestController(QObject):
         
         # 连接信号
         self._worker.progress.connect(self.progress_updated.emit)
+        self._worker.log.connect(self.log_updated.emit)  # 连接日志信号
         self._worker.finished.connect(self._on_test_finished)
         self._worker.error.connect(self._on_test_error)
         

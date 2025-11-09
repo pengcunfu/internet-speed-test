@@ -53,13 +53,20 @@ class SpeedTestModel:
         5485,   # 中国电信 - 武汉
     ]
     
-    def __init__(self):
+    def __init__(self, log_callback=None):
         """初始化模型"""
         self._speedtest_instance: Optional[speedtest.Speedtest] = None
         self._server_info: Optional[Dict] = None
         self._last_results: Dict = {}
         self._simple_speedtest: Optional[SimpleSpeedTest] = None
         self._use_simple_mode: bool = False  # 是否使用简单模式
+        self._log_callback = log_callback  # 日志回调函数
+        
+    def _log(self, message: str):
+        """输出日志"""
+        print(message)  # 仍然打印到控制台
+        if self._log_callback:
+            self._log_callback(message)  # 同时发送到界面
         
     def initialize(self) -> bool:
         """
@@ -90,7 +97,7 @@ class SpeedTestModel:
             
         try:
             if use_china_servers:
-                print(f"[测速服务器] 尝试使用预配置的 {len(self.CHINA_MAINLAND_SERVERS)} 个中国大陆服务器...")
+                self._log(f"[测速服务器] 尝试使用预配置的 {len(self.CHINA_MAINLAND_SERVERS)} 个中国大陆服务器...")
                 try:
                     # 使用预配置的中国大陆服务器ID
                     self._speedtest_instance.get_servers(self.CHINA_MAINLAND_SERVERS)
@@ -98,28 +105,28 @@ class SpeedTestModel:
                     if hasattr(self._speedtest_instance, 'servers') and self._speedtest_instance.servers:
                         server_count = sum(len(s) for s in self._speedtest_instance.servers.values())
                         if server_count > 0:
-                            print(f"[测速服务器] 成功加载 {server_count} 个国内服务器")
+                            self._log(f"[测速服务器] 成功加载 {server_count} 个国内服务器")
                             
                             # 显示可用的服务器
                             shown = 0
                             for distance, servers in sorted(self._speedtest_instance.servers.items()):
                                 for server in servers:
                                     if shown < 5:  # 显示前5个
-                                        print(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
+                                        self._log(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
                                         shown += 1
                             
                             return True
                 except Exception as e:
-                    print(f"[测速服务器] 预配置服务器加载失败: {e}")
+                    self._log(f"[测速服务器] 预配置服务器加载失败: {e}")
             
             # 如果预配置失败或不使用，则自动获取
-            print(f"[测速服务器] 正在自动获取服务器列表...")
+            self._log(f"[测速服务器] 正在自动获取服务器列表...")
             self._speedtest_instance.get_servers([])  # 获取所有服务器
             
             if hasattr(self._speedtest_instance, 'servers') and self._speedtest_instance.servers:
                 all_servers = self._speedtest_instance.servers
                 total_count = sum(len(s) for s in all_servers.values())
-                print(f"[测速服务器] 获取到 {total_count} 个服务器")
+                self._log(f"[测速服务器] 获取到 {total_count} 个服务器")
                 
                 # 只筛选中国大陆服务器，排除香港、澳门、台湾
                 filtered_servers = {}
@@ -142,26 +149,26 @@ class SpeedTestModel:
                 if filtered_servers:
                     cn_count = sum(len(s) for s in filtered_servers.values())
                     self._speedtest_instance.servers = filtered_servers
-                    print(f"[测速服务器] 已筛选到 {cn_count} 个中国大陆服务器")
+                    self._log(f"[测速服务器] 已筛选到 {cn_count} 个中国大陆服务器")
                     
                     # 显示部分服务器
                     shown = 0
                     for distance, servers in sorted(filtered_servers.items()):
                         for server in servers:
                             if shown < 5:
-                                print(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
+                                self._log(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
                                 shown += 1
                     return True
             
             # 如果所有方法都失败，切换到简单模式
-            print(f"[测速服务器] speedtest-cli无法获取服务器，切换到简单HTTP测速模式")
+            self._log(f"[测速服务器] speedtest-cli无法获取服务器，切换到简单HTTP测速模式")
             self._use_simple_mode = True
             self._simple_speedtest = SimpleSpeedTest()
             return True
             
         except Exception as e:
-            print(f"[测速服务器] 获取服务器列表失败: {e}")
-            print(f"[测速服务器] 切换到简单HTTP测速模式")
+            self._log(f"[测速服务器] 获取服务器列表失败: {e}")
+            self._log(f"[测速服务器] 切换到简单HTTP测速模式")
             self._use_simple_mode = True
             self._simple_speedtest = SimpleSpeedTest()
             return True
@@ -177,15 +184,15 @@ class SpeedTestModel:
             return None
             
         try:
-            print(f"[测速服务器] 正在测试服务器延迟，选择最佳服务器...")
+            self._log(f"[测速服务器] 正在测试服务器延迟，选择最佳服务器...")
             self._speedtest_instance.get_best_server()
             self._server_info = self._speedtest_instance.results.server
             
-            print(f"[测速服务器] 已选择最佳服务器:")
-            print(f"  - 名称: {self._server_info.get('sponsor', '未知')}")
-            print(f"  - 位置: {self._server_info.get('name', '未知')}, {self._server_info.get('country', '未知')}")
-            print(f"  - 距离: {self._server_info.get('d', 0):.2f} km")
-            print(f"  - 延迟: {self._speedtest_instance.results.ping:.2f} ms")
+            self._log(f"[测速服务器] 已选择最佳服务器:")
+            self._log(f"  - 名称: {self._server_info.get('sponsor', '未知')}")
+            self._log(f"  - 位置: {self._server_info.get('name', '未知')}, {self._server_info.get('country', '未知')}")
+            self._log(f"  - 距离: {self._server_info.get('d', 0):.2f} km")
+            self._log(f"  - 延迟: {self._speedtest_instance.results.ping:.2f} ms")
             
             return self._server_info
         except Exception as e:
@@ -207,13 +214,13 @@ class SpeedTestModel:
             return None
             
         try:
-            print(f"[下载测试] 开始测试下载速度...")
+            self._log(f"[下载测试] 开始测试下载速度...")
             download_bps = self._speedtest_instance.download()
             download_mbps = round(download_bps / 1000000, 3)
             self._last_results['download'] = download_mbps
             self._last_results['download_time'] = datetime.now()
             
-            print(f"[下载测试] 下载速度: {download_mbps} Mbps ({download_bps / 1024 / 1024:.2f} MB/s)")
+            self._log(f"[下载测试] 下载速度: {download_mbps} Mbps ({download_bps / 1024 / 1024:.2f} MB/s)")
             return download_mbps
         except Exception as e:
             print(f"[下载测试] 下载速度测试失败: {e}")
@@ -234,13 +241,13 @@ class SpeedTestModel:
             return None
             
         try:
-            print(f"[上传测试] 开始测试上传速度...")
+            self._log(f"[上传测试] 开始测试上传速度...")
             upload_bps = self._speedtest_instance.upload()
             upload_mbps = round(upload_bps / 1000000, 3)
             self._last_results['upload'] = upload_mbps
             self._last_results['upload_time'] = datetime.now()
             
-            print(f"[上传测试] 上传速度: {upload_mbps} Mbps ({upload_bps / 1024 / 1024:.2f} MB/s)")
+            self._log(f"[上传测试] 上传速度: {upload_mbps} Mbps ({upload_bps / 1024 / 1024:.2f} MB/s)")
             return upload_mbps
         except Exception as e:
             print(f"[上传测试] 上传速度测试失败: {e}")

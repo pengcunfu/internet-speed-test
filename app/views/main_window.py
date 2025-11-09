@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
         """连接控制器信号"""
         # 网速测试控制器信号
         self.speedtest_controller.progress_updated.connect(self._on_progress_updated)
+        self.speedtest_controller.log_updated.connect(self._on_log_updated)  # 连接日志信号
         self.speedtest_controller.test_completed.connect(self._on_test_completed)
         self.speedtest_controller.test_failed.connect(self._on_test_failed)
         
@@ -243,6 +244,11 @@ class MainWindow(QMainWindow):
         """进度更新处理"""
         if self._current_dialog:
             self._current_dialog.update_progress(message)
+            
+    def _on_log_updated(self, log_message: str):
+        """日志更新处理"""
+        if self._current_dialog:
+            self._current_dialog.append_log(log_message)
             
     def _on_test_completed(self, result: dict):
         """测试完成处理"""
