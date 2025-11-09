@@ -55,16 +55,17 @@ class SpeedTestWorker(QThread):
             if not self._is_running:
                 return
                 
-            # 选择最佳服务器
-            self.progress.emit("正在选择最佳服务器...")
+            # 选择最佳服务器（HTTP模式直接准备就绪）
+            self.progress.emit("准备开始测速...")
             server_info = self.model.select_best_server()
-            if not server_info:
+            if server_info is None:
                 self.error.emit("无法找到合适的测试服务器")
                 return
                 
-            server_name = server_info.get('sponsor', '测试服务器')
-            server_country = server_info.get('country', '')
-            self.progress.emit(f"已连接到: {server_name} ({server_country})")
+            # HTTP模式返回空字典表示准备就绪
+            server_name = server_info.get('sponsor', 'HTTP直接测速')
+            server_country = server_info.get('country', '国内CDN')
+            self.progress.emit(f"测速模式: {server_name} ({server_country})")
             
             if not self._is_running:
                 return
