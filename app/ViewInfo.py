@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 ViewInfo Dialog for Internet Speed Test
 网速测试信息显示对话框 - PySide6版本
@@ -23,7 +23,8 @@ def init_speedtest():
     """初始化speedtest对象"""
     global speed
     try:
-        speed = speedtest.Speedtest()
+        # 使用secure参数来避免一些连接问题
+        speed = speedtest.Speedtest(secure=True)
         return True
     except Exception as e:
         print(f"初始化speedtest失败: {e}")
@@ -63,8 +64,23 @@ class WorkerThread(QThread):
                 self.error.emit("无法初始化网速测试服务")
                 return
             try:
-                self.progress.emit("正在连接测试服务器...")
+                self.progress.emit("正在获取服务器列表...")
+                # 获取服务器列表
+                speed.get_servers()
+                self.progress.emit("正在选择最佳服务器...")
+                # 选择最佳服务器
                 speed.get_best_server()
+                server_info = speed.results.server
+                self.progress.emit(f"已连接到: {server_info.get('sponsor', '测试服务器')} ({server_info.get('country', '')})")
+            except speedtest.ConfigRetrievalError as e:
+                self.error.emit(f"无法获取配置信息，请检查网络连接: {str(e)}")
+                return
+            except speedtest.NoMatchedServers as e:
+                self.error.emit(f"无法找到匹配的测试服务器: {str(e)}")
+                return
+            except speedtest.ServersRetrievalError as e:
+                self.error.emit(f"无法获取服务器列表: {str(e)}")
+                return
             except Exception as e:
                 self.error.emit(f"连接测试服务器失败: {str(e)}")
                 return
