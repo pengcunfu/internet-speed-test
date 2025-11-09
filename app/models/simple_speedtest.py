@@ -80,10 +80,11 @@ class SimpleSpeedTest:
         
         # 单次测试即可，使用第一个可用的URL
         speed = 0
+        second_speeds = []
         for url, size, name in self.TEST_URLS['download'][:3]:  # 尝试前3个URL
             try:
                 self._log(f"[下载测试] 正在从 {name} 下载测试...")
-                speed = self._test_download_single(url, test_duration)
+                speed, second_speeds = self._test_download_single(url, test_duration)
                 if speed > 0:
                     break  # 成功就退出
             except Exception as e:
@@ -94,22 +95,32 @@ class SimpleSpeedTest:
             self._log(f"[下载测试] 所有测试都失败")
             return None
         
-        # 保存结果（单次测试）
-        self.download_speed = round(speed, 3)
+        # 计算统计信息（基于每秒速度）
+        if second_speeds:
+            max_speed = max(second_speeds)
+            min_speed = min(second_speeds)
+            avg_speed = speed  # 总平均速度
+        else:
+            max_speed = min_speed = avg_speed = speed
+        
+        # 保存结果
+        self.download_speed = round(avg_speed, 3)
         self.download_stats = {
-            'max': round(speed, 3),
-            'min': round(speed, 3),
-            'avg': round(speed, 3),
-            'speeds': [speed]
+            'max': round(max_speed, 3),
+            'min': round(min_speed, 3),
+            'avg': round(avg_speed, 3),
+            'speeds': second_speeds
         }
         
         # 显示最终统计
         self._log(f"[下载测试] ========== 下载速度统计 ==========")
-        self._log(f"[下载测试] 平均速度: {speed / 8:.2f} MB/s")
+        self._log(f"[下载测试] 最高速度: {max_speed / 8:.2f} MB/s")
+        self._log(f"[下载测试] 最低速度: {min_speed / 8:.2f} MB/s")
+        self._log(f"[下载测试] 平均速度: {avg_speed / 8:.2f} MB/s")
         self._log(f"[下载测试] =====================================")
         return self.download_speed
             
-    def _test_download_single(self, url: str, duration: int = 10) -> float:
+    def _test_download_single(self, url: str, duration: int = 10) -> tuple:
         """
         单个URL下载测试（限时，实时显示速度，循环下载直到时间到）
         
@@ -118,13 +129,14 @@ class SimpleSpeedTest:
             duration: 测试持续时间
             
         Returns:
-            float: 下载速度(Mbps)
+            tuple: (平均速度Mbps, 每秒速度列表)
         """
         start_time = time.time()
         downloaded = 0
         downloaded_chunks = []  # 保存下载的数据块
         last_log_time = start_time
         last_downloaded = 0
+        second_speeds = []  # 记录每秒的速度
         
         try:
             headers = {
@@ -149,6 +161,7 @@ class SimpleSpeedTest:
                                 bytes_in_second = downloaded - last_downloaded
                                 speed_mbps = (bytes_in_second * 8) / (current_time - last_log_time) / 1_000_000
                                 avg_speed_mbps = (downloaded * 8) / elapsed / 1_000_000
+                                second_speeds.append(speed_mbps)  # 记录每秒速度
                                 self._log(f"[下载测试] 第{int(elapsed)}秒: {speed_mbps / 8:.2f} MB/s | 平均: {avg_speed_mbps / 8:.2f} MB/s")
                                 last_log_time = current_time
                                 last_downloaded = downloaded
@@ -177,14 +190,14 @@ class SimpleSpeedTest:
                 # 计算最终平均速度
                 speed_mbps = (downloaded * 8) / elapsed / 1_000_000
                 self._log(f"[下载测试] 完成: 平均 {speed_mbps / 8:.2f} MB/s - 下载了 {downloaded / (1024*1024):.2f} MB，耗时 {elapsed:.1f} 秒")
-                return speed_mbps
+                return speed_mbps, second_speeds
             
         except Exception as e:
             self._log(f"[下载测试] 下载出错: {e}")
             
-        return 0.0
+        return 0.0, []
         
-    def _test_upload_single(self, duration: int = 10) -> float:
+    def _test_upload_single(self, duration: int = 10) -> tuple:
         """
         单次上传测试（限时）
         
@@ -192,7 +205,7 @@ class SimpleSpeedTest:
             duration: 测试持续时间（秒）
             
         Returns:
-            float: 上传速度(Mbps)
+            tuple: (平均速度Mbps, 每秒速度列表)
         """
         chunk_size = 8192  # 8KB per chunk
         
@@ -210,6 +223,7 @@ class SimpleSpeedTest:
                 start_time = time.time()
                 last_log_time = start_time
                 last_uploaded = 0
+                second_speeds = []  # 记录每秒的速度
                 
                 def data_generator():
                     nonlocal uploaded_bytes, last_log_time, last_uploaded
@@ -230,6 +244,7 @@ class SimpleSpeedTest:
                             bytes_in_second = uploaded_bytes - last_uploaded
                             speed_mbps = (bytes_in_second * 8) / (current_time - last_log_time) / 1_000_000
                             avg_speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
+                            second_speeds.append(speed_mbps)  # 记录每秒速度
                             self._log(f"[上传测试] 第{int(elapsed)}秒: {speed_mbps / 8:.2f} MB/s | 平均: {avg_speed_mbps / 8:.2f} MB/s")
                             last_log_time = current_time
                             last_uploaded = uploaded_bytes
@@ -243,20 +258,20 @@ class SimpleSpeedTest:
                 if elapsed > 0 and uploaded_bytes > 0:
                     # 计算最终平均速度
                     speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                    self._log(f"[上传测试] {name} 完成: 平均 {speed_mbps / 8:.2f} MB/s - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
-                    return speed_mbps
+                    self._log(f"[上传测试] {name} 完成: 平均 {speed_mbps / 8:.2f} MB/s - 上传了 {uploaded_bytes / (1024*1024):.2f} MB，耗时 {elapsed:.1f} 秒")
+                    return speed_mbps, second_speeds
                     
             except requests.exceptions.Timeout:
                 # 超时是正常的，因为我们限时上传
                 elapsed = time.time() - start_time
                 if elapsed > 0 and uploaded_bytes > 0:
                     speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                    self._log(f"[上传测试] {name} 限时完成: 平均 {speed_mbps / 8:.2f} MB/s - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
-                    return speed_mbps
+                    self._log(f"[上传测试] {name} 限时完成: 平均 {speed_mbps / 8:.2f} MB/s - 上传了 {uploaded_bytes / (1024*1024):.2f} MB，耗时 {elapsed:.1f} 秒")
+                    return speed_mbps, second_speeds
             except Exception as e:
                 self._log(f"[上传测试] {name} 测试失败: {e}")
                 
-        return 0.0
+        return 0.0, []
         
     def test_upload(self, test_duration: int = 10) -> Optional[float]:
         """
@@ -271,31 +286,39 @@ class SimpleSpeedTest:
         self._log(f"[上传测试] 开始测试上传速度（限时{test_duration}秒）...")
         
         # 单次测试即可，已经有每秒实时速度统计
-        speed = self._test_upload_single(test_duration)
+        speed, second_speeds = self._test_upload_single(test_duration)
         
         if speed <= 0:
             self._log(f"[上传测试] 测试失败")
             return None
-            
-        speeds = [speed]
         
         # 上传完成后清理下载的数据
         if self._downloaded_data:
             self._log(f"[上传测试] 清理下载数据...")
             self._downloaded_data = None
         
-        # 保存结果（单次测试，最高最低平均都是同一个值）
-        self.upload_speed = round(speed, 3)
+        # 计算统计信息（基于每秒速度）
+        if second_speeds:
+            max_speed = max(second_speeds)
+            min_speed = min(second_speeds)
+            avg_speed = speed  # 总平均速度
+        else:
+            max_speed = min_speed = avg_speed = speed
+        
+        # 保存结果
+        self.upload_speed = round(avg_speed, 3)
         self.upload_stats = {
-            'max': round(speed, 3),
-            'min': round(speed, 3),
-            'avg': round(speed, 3),
-            'speeds': speeds
+            'max': round(max_speed, 3),
+            'min': round(min_speed, 3),
+            'avg': round(avg_speed, 3),
+            'speeds': second_speeds
         }
         
         # 显示最终统计
         self._log(f"[上传测试] ========== 上传速度统计 ==========")
-        self._log(f"[上传测试] 平均速度: {speed / 8:.2f} MB/s")
+        self._log(f"[上传测试] 最高速度: {max_speed / 8:.2f} MB/s")
+        self._log(f"[上传测试] 最低速度: {min_speed / 8:.2f} MB/s")
+        self._log(f"[上传测试] 平均速度: {avg_speed / 8:.2f} MB/s")
         self._log(f"[上传测试] =====================================")
         return self.upload_speed
             
