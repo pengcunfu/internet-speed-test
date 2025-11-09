@@ -44,18 +44,24 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
         
+    - name: Prepare distribution package
+      shell: bash
+      run: |
+        cd dist/main.dist
+        7z a -tzip ../../InternetSpeedTest-${{ steps.get_version.outputs.version }}-windows.zip *
+        
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: InternetSpeedTest-${{ steps.get_version.outputs.version }}-windows
-        path: dist/InternetSpeedTest.exe
+        path: InternetSpeedTest-${{ steps.get_version.outputs.version }}-windows.zip
         if-no-files-found: error
         
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/InternetSpeedTest.exe
+        files: InternetSpeedTest-${{ steps.get_version.outputs.version }}-windows.zip
         draft: false
         prerelease: false
         generate_release_notes: true
