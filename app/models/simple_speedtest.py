@@ -171,52 +171,85 @@ class SimpleSpeedTest:
             
         return 0.0
         
-    def test_upload(self, test_size_mb: int = 100) -> Optional[float]:
+    def _test_upload_single(self, duration: int = 10) -> float:
         """
-        测试上传速度
+        单次上传测试（限时）
         
         Args:
-            test_size_mb: 测试数据大小(MB)，默认100MB（如果有下载数据则使用下载数据）
+            duration: 测试持续时间（秒）
+            
+        Returns:
+            float: 上传速度(Mbps)
+        """
+        chunk_size = 8192  # 8KB per chunk
+        
+        for url, name in self.TEST_URLS['upload'][:1]:
+            try:
+                self._log(f"[上传测试] 正在向 {name} 上传测试...")
+                
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Content-Type': 'application/octet-stream'
+                }
+                
+                # 使用生成器流式上传
+                uploaded_bytes = 0
+                start_time = time.time()
+                
+                def data_generator():
+                    nonlocal uploaded_bytes
+                    test_start = time.time()
+                    while time.time() - test_start < duration:
+                        # 使用下载的数据或生成新数据
+                        if self._downloaded_data and len(self._downloaded_data) >= chunk_size:
+                            chunk = self._downloaded_data[:chunk_size]
+                        else:
+                            chunk = b'0' * chunk_size
+                        uploaded_bytes += len(chunk)
+                        yield chunk
+                
+                # 发送请求
+                response = requests.post(url, data=data_generator(), timeout=duration + 5, headers=headers)
+                elapsed = time.time() - start_time
+                
+                if elapsed > 0 and uploaded_bytes > 0:
+                    # 计算速度
+                    speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
+                    self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
+                    return speed_mbps
+                    
+            except requests.exceptions.Timeout:
+                # 超时是正常的，因为我们限时上传
+                elapsed = time.time() - start_time
+                if elapsed > 0 and uploaded_bytes > 0:
+                    speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
+                    self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 限时完成，上传了 {uploaded_bytes / (1024*1024):.2f} MB")
+                    return speed_mbps
+            except Exception as e:
+                self._log(f"[上传测试] {name} 测试失败: {e}")
+                
+        return 0.0
+        
+    def test_upload(self, test_duration: int = 10) -> Optional[float]:
+        """
+        测试上传速度（限时测试）
+        
+        Args:
+            test_duration: 测试持续时间（秒），默认10秒
             
         Returns:
             Optional[float]: 上传速度(Mbps)
         """
-        self._log(f"[上传测试] 开始测试上传速度...")
-        
-        # 使用下载的数据或生成新数据
-        if self._downloaded_data and len(self._downloaded_data) > 0:
-            test_data = self._downloaded_data
-            self._log(f"[上传测试] 使用下载的 {len(test_data) / (1024*1024):.2f} MB 数据进行上传测试")
-        else:
-            test_data = b'0' * (test_size_mb * 1024 * 1024)
-            self._log(f"[上传测试] 使用生成的 {test_size_mb} MB 数据进行上传测试")
+        self._log(f"[上传测试] 开始测试上传速度（限时{test_duration}秒）...")
         
         speeds = []
         
         # 多次上传测试以获得更准确的统计
         test_count = 3  # 测试3次
         for i in range(test_count):
-            for url, name in self.TEST_URLS['upload'][:1]:  # 只使用第一个URL
-                try:
-                    self._log(f"[上传测试] 第{i+1}次向 {name} 上传测试...")
-                    
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
-                    
-                    start_time = time.time()
-                    response = requests.post(url, data=test_data, timeout=30, headers=headers)
-                    elapsed = time.time() - start_time
-                    
-                    if response.status_code == 200 and elapsed > 0:
-                        # 计算速度
-                        speed_mbps = (len(test_data) * 8) / elapsed / 1_000_000
-                        speeds.append(speed_mbps)
-                        self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s)")
-                        
-                except Exception as e:
-                    self._log(f"[上传测试] {name} 测试失败: {e}")
-                    continue
+            speed = self._test_upload_single(test_duration)
+            if speed > 0:
+                speeds.append(speed)
         
         # 上传完成后清理下载的数据
         if self._downloaded_data:
