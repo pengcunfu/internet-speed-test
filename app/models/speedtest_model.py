@@ -32,10 +32,13 @@ class SpeedTestModel:
             print(f"初始化speedtest失败: {e}")
             return False
             
-    def get_servers(self) -> bool:
+    def get_servers(self, country_code: str = 'CN') -> bool:
         """
-        获取服务器列表
+        获取服务器列表（优先国内服务器）
         
+        Args:
+            country_code: 国家代码，默认CN（中国）
+            
         Returns:
             bool: 是否成功获取服务器列表
         """
@@ -43,7 +46,24 @@ class SpeedTestModel:
             return False
             
         try:
+            # 获取所有服务器
             self._speedtest_instance.get_servers()
+            
+            # 如果指定了国家代码，尝试筛选该国家的服务器
+            if country_code and hasattr(self._speedtest_instance, 'servers'):
+                all_servers = self._speedtest_instance.servers
+                # 筛选指定国家的服务器
+                filtered_servers = {}
+                for key, servers in all_servers.items():
+                    country_servers = [s for s in servers if s.get('cc', '') == country_code]
+                    if country_servers:
+                        filtered_servers[key] = country_servers
+                
+                # 如果找到了国内服务器，使用它们
+                if filtered_servers:
+                    self._speedtest_instance.servers = filtered_servers
+                    print(f"已筛选到 {country_code} 的服务器")
+            
             return True
         except Exception as e:
             print(f"获取服务器列表失败: {e}")
