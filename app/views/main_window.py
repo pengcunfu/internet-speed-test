@@ -212,6 +212,7 @@ class MainWindow(QMainWindow):
         
         # 显示结果对话框
         self._current_dialog = ResultDialog(self, "网速测试")
+        self._current_dialog.dialog_closed.connect(self._on_dialog_closed)
         self._current_dialog.show()
         
         # 开始测试
@@ -230,6 +231,7 @@ class MainWindow(QMainWindow):
         
         # 显示结果对话框
         self._current_dialog = ResultDialog(self, "IP信息查询")
+        self._current_dialog.dialog_closed.connect(self._on_dialog_closed)
         self._current_dialog.show()
         
         # 开始查询
@@ -273,6 +275,16 @@ class MainWindow(QMainWindow):
         if self._current_dialog:
             self._current_dialog.show_error(error_msg)
         self._set_buttons_enabled(True)
+        
+    def _on_dialog_closed(self):
+        """对话框关闭处理"""
+        # 停止所有正在进行的操作
+        self.speedtest_controller.cancel_test()
+        self.ip_controller.cancel_query()
+        # 重新启用按钮
+        self._set_buttons_enabled(True)
+        # 清除当前对话框引用
+        self._current_dialog = None
         
     def _format_speed_test_result(self, result: dict) -> str:
         """

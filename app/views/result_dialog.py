@@ -7,12 +7,15 @@ Result Dialog View
 import pyperclip
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QTextEdit, QPushButton, QMessageBox)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QPalette, QColor
 
 
 class ResultDialog(QDialog):
     """结果显示对话框"""
+    
+    # 定义关闭信号
+    dialog_closed = Signal()
     
     def __init__(self, parent, title: str):
         """
@@ -182,3 +185,9 @@ class ResultDialog(QDialog):
             QMessageBox.information(self, "提示", "信息已复制到剪贴板")
         except Exception as e:
             QMessageBox.warning(self, "错误", f"复制失败: {str(e)}")
+            
+    def closeEvent(self, event):
+        """窗口关闭事件"""
+        # 发送关闭信号
+        self.dialog_closed.emit()
+        event.accept()
