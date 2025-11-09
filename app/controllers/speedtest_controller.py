@@ -93,12 +93,16 @@ class SpeedTestWorker(QThread):
                     return
                     
             if self.test_type == 'ping':
-                self.progress.emit("正在测试Ping...")
-                ping = self.model.get_ping()
-                if ping is None:
+                self.progress.emit("正在测试多个国内服务器的Ping...")
+                ping_results = self.model.ping_multiple_hosts()
+                if ping_results is None:
                     self.error.emit("Ping测试失败")
                     return
-                result['ping'] = ping
+                result['ping'] = ping_results['average']
+                result['ping_min'] = ping_results['min']
+                result['ping_max'] = ping_results['max']
+                result['ping_details'] = ping_results['results']
+                result['ping_success_rate'] = f"{ping_results['success_count']}/{ping_results['total_count']}"
                 
             # 发送完成信号
             self.finished.emit(result)

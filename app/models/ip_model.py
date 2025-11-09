@@ -24,30 +24,33 @@ class IPModel:
         """
         # 国内IP查询服务列表
         ip_services = [
-            'https://myip.ipip.net/json',  # IPIP.NET
-            'https://api.ip.sb/ip',  # IP.SB
-            'https://ipinfo.io/ip',  # IPInfo
-            'https://api.ipify.org?format=text',  # IPify备用
+            ('https://api.ip.sb/ip', 'text'),  # IP.SB - 纯文本
+            ('https://ipinfo.io/ip', 'text'),  # IPInfo - 纯文本
+            ('https://api.ipify.org?format=text', 'text'),  # IPify - 纯文本
+            ('http://myip.ipip.net/s', 'text'),  # IPIP.NET - 纯文本
         ]
         
-        for service in ip_services:
+        for service, format_type in ip_services:
             try:
+                print(f"[IP查询] 尝试从 {service} 获取IP...")
                 response = requests.get(service, timeout=5)
-                if 'json' in service:
-                    data = response.json()
-                    # IPIP.NET返回格式
-                    if 'data' in data and 'ip' in data['data']:
-                        return data['data']['ip']
-                    # 其他JSON格式
-                    elif 'ip' in data:
-                        return data['ip']
+                response.raise_for_status()
+                
+                if format_type == 'text':
+                    ip = response.text.strip()
+                    print(f"[IP查询] 成功获取IP: {ip}")
+                    return ip
                 else:
-                    # 纯文本格式
-                    return response.text.strip()
+                    data = response.json()
+                    if 'ip' in data:
+                        ip = data['ip']
+                        print(f"[IP查询] 成功获取IP: {ip}")
+                        return ip
             except Exception as e:
-                print(f"从 {service} 获取IP失败: {e}")
+                print(f"[IP查询] 从 {service} 获取IP失败: {e}")
                 continue
         
+        print("[IP查询] 所有服务都失败")
         return None
             
     def get_ip_info_primary(self, ip: str) -> Optional[Dict]:
@@ -60,37 +63,17 @@ class IPModel:
         Returns:
             Optional[Dict]: IP信息字典，失败返回None
         """
-        try:
-            # 使用IPIP.NET的API（国内服务）
-            response = requests.get(
-                f'https://myip.ipip.net/json/{ip}',
-                timeout=self._timeout
-            )
-            data = response.json()
-            
-            if 'data' in data:
-                info = data['data']
-                return {
-                    "ip": ip,
-                    "country": info.get("country", "未知"),
-                    "countryCode": info.get("country_code", "未知"),
-                    "city": info.get("city", "未知"),
-                    "region": info.get("province", "未知"),
-                    "isp": info.get("isp", "未知"),
-                    "timezone": info.get("timezone", "未知")
-                }
-        except Exception as e:
-            print(f"获取IP信息失败(IPIP.NET): {e}")
-            
         # 备用：使用IP.SB
         try:
+            print(f"[IP信息] 尝试从 IP.SB 查询 {ip} 的信息...")
             response = requests.get(
                 f'https://api.ip.sb/geoip/{ip}',
                 timeout=self._timeout
             )
+            response.raise_for_status()
             data = response.json()
             
-            return {
+            result = {
                 "ip": data.get("ip", ip),
                 "country": data.get("country", "未知"),
                 "countryCode": data.get("country_code", "未知"),
@@ -99,8 +82,10 @@ class IPModel:
                 "isp": data.get("isp", "未知"),
                 "timezone": data.get("timezone", "未知")
             }
+            print(f"[IP信息] 成功获取: {result['country']} {result['city']}")
+            return result
         except Exception as e:
-            print(f"获取IP信息失败(IP.SB): {e}")
+            print(f"[IP信息] IP.SB 查询失败: {e}")
             return None
             
     def get_ip_info_fallback(self, ip: str) -> Optional[Dict]:

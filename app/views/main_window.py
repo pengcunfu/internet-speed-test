@@ -292,7 +292,19 @@ class MainWindow(QMainWindow):
             lines.append(f"上传速度: {result['upload']} Mbps")
         elif 'ping' in result:
             lines.append("Ping测试完成！\n")
-            lines.append(f"延迟: {result['ping']} ms")
+            lines.append(f"平均延迟: {result['ping']} ms")
+            if 'ping_min' in result:
+                lines.append(f"最小延迟: {result['ping_min']} ms")
+                lines.append(f"最大延迟: {result['ping_max']} ms")
+            if 'ping_success_rate' in result:
+                lines.append(f"成功率: {result['ping_success_rate']}")
+            if 'ping_details' in result:
+                lines.append("\n详细结果:")
+                for name, ping_time in result['ping_details'].items():
+                    if ping_time is not None:
+                        lines.append(f"  {name}: {ping_time:.1f} ms")
+                    else:
+                        lines.append(f"  {name}: 超时")
             
         if 'timestamp' in result:
             lines.append(f"测试时间: {result['timestamp']}")

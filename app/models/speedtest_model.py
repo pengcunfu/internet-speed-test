@@ -5,8 +5,10 @@ SpeedTest Model
 """
 
 import speedtest
+import subprocess
+import platform
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 
 class SpeedTestModel:
@@ -46,12 +48,15 @@ class SpeedTestModel:
             return False
             
         try:
+            print(f"[测速服务器] 正在获取服务器列表...")
             # 获取所有服务器
             self._speedtest_instance.get_servers()
             
             # 如果指定了国家代码，尝试筛选该国家的服务器
             if country_code and hasattr(self._speedtest_instance, 'servers'):
                 all_servers = self._speedtest_instance.servers
+                print(f"[测速服务器] 获取到 {sum(len(s) for s in all_servers.values())} 个服务器")
+                
                 # 筛选指定国家的服务器
                 filtered_servers = {}
                 for key, servers in all_servers.items():
@@ -61,12 +66,15 @@ class SpeedTestModel:
                 
                 # 如果找到了国内服务器，使用它们
                 if filtered_servers:
+                    cn_count = sum(len(s) for s in filtered_servers.values())
                     self._speedtest_instance.servers = filtered_servers
-                    print(f"已筛选到 {country_code} 的服务器")
+                    print(f"[测速服务器] 已筛选到 {cn_count} 个 {country_code} 服务器")
+                else:
+                    print(f"[测速服务器] 未找到 {country_code} 服务器，使用全球服务器")
             
             return True
         except Exception as e:
-            print(f"获取服务器列表失败: {e}")
+            print(f"[测速服务器] 获取服务器列表失败: {e}")
             return False
             
     def select_best_server(self) -> Optional[Dict]:
@@ -80,11 +88,19 @@ class SpeedTestModel:
             return None
             
         try:
+            print(f"[测速服务器] 正在测试服务器延迟，选择最佳服务器...")
             self._speedtest_instance.get_best_server()
             self._server_info = self._speedtest_instance.results.server
+            
+            print(f"[测速服务器] 已选择最佳服务器:")
+            print(f"  - 名称: {self._server_info.get('sponsor', '未知')}")
+            print(f"  - 位置: {self._server_info.get('name', '未知')}, {self._server_info.get('country', '未知')}")
+            print(f"  - 距离: {self._server_info.get('d', 0):.2f} km")
+            print(f"  - 延迟: {self._speedtest_instance.results.ping:.2f} ms")
+            
             return self._server_info
         except Exception as e:
-            print(f"选择最佳服务器失败: {e}")
+            print(f"[测速服务器] 选择最佳服务器失败: {e}")
             return None
             
     def test_download(self) -> Optional[float]:
@@ -98,13 +114,16 @@ class SpeedTestModel:
             return None
             
         try:
+            print(f"[下载测试] 开始测试下载速度...")
             download_bps = self._speedtest_instance.download()
             download_mbps = round(download_bps / 1000000, 3)
             self._last_results['download'] = download_mbps
             self._last_results['download_time'] = datetime.now()
+            
+            print(f"[下载测试] 下载速度: {download_mbps} Mbps ({download_bps / 1024 / 1024:.2f} MB/s)")
             return download_mbps
         except Exception as e:
-            print(f"下载速度测试失败: {e}")
+            print(f"[下载测试] 下载速度测试失败: {e}")
             return None
             
     def test_upload(self) -> Optional[float]:
@@ -118,18 +137,21 @@ class SpeedTestModel:
             return None
             
         try:
+            print(f"[上传测试] 开始测试上传速度...")
             upload_bps = self._speedtest_instance.upload()
             upload_mbps = round(upload_bps / 1000000, 3)
             self._last_results['upload'] = upload_mbps
             self._last_results['upload_time'] = datetime.now()
+            
+            print(f"[上传测试] 上传速度: {upload_mbps} Mbps ({upload_bps / 1024 / 1024:.2f} MB/s)")
             return upload_mbps
         except Exception as e:
-            print(f"上传速度测试失败: {e}")
+            print(f"[上传测试] 上传速度测试失败: {e}")
             return None
             
     def get_ping(self) -> Optional[float]:
         """
-        获取Ping值
+        获取Ping值（从speedtest服务器）
         
         Returns:
             Optional[float]: Ping值(ms)，失败返回None
@@ -141,9 +163,127 @@ class SpeedTestModel:
             ping = round(self._speedtest_instance.results.ping, 1)
             self._last_results['ping'] = ping
             self._last_results['ping_time'] = datetime.now()
+            
+            print(f"[Ping测试] 到测速服务器的延迟: {ping} ms")
             return ping
         except Exception as e:
-            print(f"获取Ping失败: {e}")
+            print(f"[Ping测试] 获取Ping失败: {e}")
+            return None
+            
+    def ping_multiple_hosts(self, hosts: List[str] = None) -> Optional[Dict]:
+        """
+        Ping多个主机并计算平均延迟（国内常用服务）
+        
+        Args:
+            hosts: 主机列表，默认使用国内常用服务
+            
+        Returns:
+            Optional[Dict]: 包含各主机延迟和平均值的字典
+        """
+        if hosts is None:
+            # 国内常用服务器
+            hosts = [
+                ('114.114.114.114', '114DNS'),
+                ('223.5.5.5', '阿里DNS'),
+                ('119.29.29.29', '腾讯DNS'),
+                ('180.76.76.76', '百度DNS'),
+                ('1.2.4.8', 'CNNIC DNS'),
+            ]
+        
+        print(f"[Ping测试] 开始测试 {len(hosts)} 个国内服务器的延迟...")
+        
+        results = {}
+        valid_pings = []
+        
+        for host_info in hosts:
+            if isinstance(host_info, tuple):
+                host, name = host_info
+            else:
+                host, name = host_info, host_info
+                
+            ping_time = self._ping_host(host)
+            results[name] = ping_time
+            
+            if ping_time is not None:
+                valid_pings.append(ping_time)
+                print(f"[Ping测试] {name} ({host}): {ping_time:.1f} ms")
+            else:
+                print(f"[Ping测试] {name} ({host}): 超时")
+        
+        if valid_pings:
+            avg_ping = round(sum(valid_pings) / len(valid_pings), 1)
+            min_ping = round(min(valid_pings), 1)
+            max_ping = round(max(valid_pings), 1)
+            
+            print(f"[Ping测试] 统计结果:")
+            print(f"  - 平均延迟: {avg_ping} ms")
+            print(f"  - 最小延迟: {min_ping} ms")
+            print(f"  - 最大延迟: {max_ping} ms")
+            print(f"  - 成功率: {len(valid_pings)}/{len(hosts)}")
+            
+            return {
+                'results': results,
+                'average': avg_ping,
+                'min': min_ping,
+                'max': max_ping,
+                'success_count': len(valid_pings),
+                'total_count': len(hosts)
+            }
+        else:
+            print(f"[Ping测试] 所有主机都无法访问")
+            return None
+            
+    def _ping_host(self, host: str, count: int = 4) -> Optional[float]:
+        """
+        Ping单个主机
+        
+        Args:
+            host: 主机地址
+            count: ping次数
+            
+        Returns:
+            Optional[float]: 平均延迟(ms)，失败返回None
+        """
+        try:
+            # 根据操作系统选择ping命令
+            system = platform.system().lower()
+            if system == 'windows':
+                cmd = ['ping', '-n', str(count), '-w', '1000', host]
+            else:
+                cmd = ['ping', '-c', str(count), '-W', '1', host]
+            
+            # 执行ping命令
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                # 解析ping结果
+                output = result.stdout
+                if system == 'windows':
+                    # Windows: 平均 = XXms
+                    for line in output.split('\n'):
+                        if '平均' in line or 'Average' in line:
+                            parts = line.split('=')
+                            if len(parts) > 1:
+                                avg_str = parts[-1].strip().replace('ms', '').strip()
+                                return float(avg_str)
+                else:
+                    # Linux/Mac: rtt min/avg/max/mdev = XX/XX/XX/XX ms
+                    for line in output.split('\n'):
+                        if 'rtt' in line or 'round-trip' in line:
+                            parts = line.split('=')
+                            if len(parts) > 1:
+                                values = parts[1].split('/')
+                                if len(values) >= 2:
+                                    return float(values[1])
+            
+            return None
+        except Exception as e:
+            print(f"[Ping测试] Ping {host} 失败: {e}")
             return None
             
     def get_server_info(self) -> Optional[Dict]:
