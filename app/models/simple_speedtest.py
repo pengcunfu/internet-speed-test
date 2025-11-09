@@ -14,25 +14,18 @@ from datetime import datetime
 class SimpleSpeedTest:
     """简单的网速测试类"""
     
-    # 国内测速文件URL（使用CDN和大文件）
+    # 国内测速文件URL（使用CDN和适中大小的文件）
     TEST_URLS = {
         'download': [
-            # 阿里云CDN
-            ('https://mirrors.aliyun.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '阿里云镜像站'),
-            # 腾讯云CDN
+            # 使用较小的测试文件，更快更可靠
             ('https://dldir1.qq.com/qqfile/qq/PCQQ9.7.17/QQ9.7.17.29225.exe', '200MB', '腾讯QQ下载'),
-            # 网易云CDN
-            ('https://mirrors.163.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '网易镜像站'),
-            # 华为云CDN
-            ('https://mirrors.huaweicloud.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '华为云镜像站'),
-            # 清华大学镜像站
-            ('https://mirrors.tuna.tsinghua.edu.cn/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '清华大学镜像站'),
-            # 中国科技大学镜像站
-            ('https://mirrors.ustc.edu.cn/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '中科大镜像站'),
-            # 搜狐CDN
-            ('http://mirrors.sohu.com/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-2009.iso', '100MB', '搜狐镜像站'),
-            # 百度云盘分享（公开文件）
+            ('https://mirrors.aliyun.com/ubuntu-releases/22.04/ubuntu-22.04.3-desktop-amd64.iso', '4GB', '阿里云Ubuntu镜像'),
+            ('https://mirrors.163.com/ubuntu-releases/22.04/ubuntu-22.04.3-desktop-amd64.iso', '4GB', '网易Ubuntu镜像'),
+            ('https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/22.04/ubuntu-22.04.3-desktop-amd64.iso', '4GB', '清华Ubuntu镜像'),
+            ('https://mirrors.ustc.edu.cn/ubuntu-releases/22.04/ubuntu-22.04.3-desktop-amd64.iso', '4GB', '中科大Ubuntu镜像'),
             ('https://issuecdn.baidupcs.com/issue/netdisk/yunguanjia/BaiduNetdisk_7.17.0.12.exe', '100MB', '百度网盘客户端'),
+            ('http://mirrors.sohu.com/ubuntu-releases/22.04/ubuntu-22.04.3-desktop-amd64.iso', '4GB', '搜狐Ubuntu镜像'),
+            ('https://mirrors.huaweicloud.com/ubuntu-releases/22.04/ubuntu-22.04.3-desktop-amd64.iso', '4GB', '华为云Ubuntu镜像'),
         ],
         'upload': [
             # 使用国内测试接口
@@ -106,7 +99,11 @@ class SimpleSpeedTest:
         downloaded = 0
         
         try:
-            response = requests.get(url, stream=True, timeout=30)
+            # 添加User-Agent避免被拦截
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, stream=True, timeout=30, headers=headers, allow_redirects=True)
             response.raise_for_status()
             
             for chunk in response.iter_content(chunk_size=8192):
@@ -119,58 +116,68 @@ class SimpleSpeedTest:
                     break
             
             elapsed = time.time() - start_time
-            if elapsed > 0:
+            if elapsed > 0 and downloaded > 0:
                 # 计算速度: (字节数 * 8) / 时间 / 1,000,000 = Mbps
                 speed_mbps = (downloaded * 8) / elapsed / 1_000_000
                 return speed_mbps
             
+        except requests.exceptions.Timeout:
+            self._log(f"[下载测试] 连接超时")
+        except requests.exceptions.ConnectionError:
+            self._log(f"[下载测试] 连接失败")
+        except requests.exceptions.HTTPError as e:
+            self._log(f"[下载测试] HTTP错误: {e.response.status_code}")
         except Exception as e:
-            print(f"[下载测试] 下载出错: {e}")
+            self._log(f"[下载测试] 下载出错: {e}")
             
         return 0.0
         
-    def test_upload(self, test_size_mb: int = 5) -> Optional[float]:
+    def test_upload(self, test_size_mb: int = 1) -> Optional[float]:
         """
         测试上传速度
         
         Args:
-            test_size_mb: 测试数据大小(MB)
+            test_size_mb: 测试数据大小(MB)，默认1MB
             
         Returns:
             Optional[float]: 上传速度(Mbps)
         """
-        print(f"[上传测试] 开始测试上传速度...")
+        self._log(f"[上传测试] 开始测试上传速度...")
         
-        # 生成测试数据
+        # 生成测试数据（减小到1MB）
         test_data = b'0' * (test_size_mb * 1024 * 1024)
         
         speeds = []
         
         for url, name in self.TEST_URLS['upload'][:1]:  # 只使用第一个URL
             try:
-                print(f"[上传测试] 正在向 {name} 上传测试...")
+                self._log(f"[上传测试] 正在向 {name} 上传测试...")
+                
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
                 
                 start_time = time.time()
-                response = requests.post(url, data=test_data, timeout=30)
+                response = requests.post(url, data=test_data, timeout=30, headers=headers)
                 elapsed = time.time() - start_time
                 
                 if response.status_code == 200 and elapsed > 0:
                     # 计算速度
                     speed_mbps = (len(test_data) * 8) / elapsed / 1_000_000
                     speeds.append(speed_mbps)
-                    print(f"[上传测试] {name}: {speed_mbps:.2f} Mbps")
+                    self._log(f"[上传测试] {name}: {speed_mbps:.2f} Mbps")
                     
             except Exception as e:
-                print(f"[上传测试] {name} 测试失败: {e}")
+                self._log(f"[上传测试] {name} 测试失败: {e}")
                 continue
         
         if speeds:
             avg_speed = sum(speeds) / len(speeds)
             self.upload_speed = round(avg_speed, 3)
-            print(f"[上传测试] 平均上传速度: {self.upload_speed} Mbps ({self.upload_speed / 8:.2f} MB/s)")
+            self._log(f"[上传测试] 平均上传速度: {self.upload_speed} Mbps ({self.upload_speed / 8:.2f} MB/s)")
             return self.upload_speed
         else:
-            print(f"[上传测试] 所有测试都失败")
+            self._log(f"[上传测试] 所有测试都失败")
             return None
             
     def test_ping(self, hosts: list = None) -> Optional[Dict]:
