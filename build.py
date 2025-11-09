@@ -10,6 +10,7 @@ import sys
 import shutil
 import subprocess
 from pathlib import Path
+from PIL import Image
 
 
 def clean_build_dirs():
@@ -21,10 +22,42 @@ def clean_build_dirs():
             shutil.rmtree(dir_name)
 
 
+def convert_png_to_ico():
+    """将PNG图标转换为ICO格式"""
+    png_path = Path('resources/icon.png')
+    ico_path = Path('resources/icon.ico')
+    
+    if not png_path.exists():
+        print("⚠ 未找到图标文件: resources/icon.png")
+        return False
+    
+    if ico_path.exists():
+        print(f"✓ 图标文件已存在: {ico_path}")
+        return True
+    
+    try:
+        print(f"正在转换图标: {png_path} -> {ico_path}")
+        img = Image.open(png_path)
+        # 转换为RGBA模式
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        # 保存为ICO格式，包含多个尺寸
+        img.save(ico_path, format='ICO', sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+        print(f"✓ 图标转换成功: {ico_path}")
+        return True
+    except ImportError:
+        print("✗ 需要安装Pillow库来转换图标")
+        print("请运行: pip install Pillow")
+        return False
+    except Exception as e:
+        print(f"✗ 图标转换失败: {e}")
+        return False
+
+
 def check_nuitka():
     """检查Nuitka是否已安装"""
     try:
-        result = subprocess.run(['nuitka', '--version'], 
+        result = subprocess.run([sys.executable, '-m', 'nuitka', '--version'], 
                               capture_output=True, 
                               text=True, 
                               check=True)
@@ -42,33 +75,37 @@ def build_exe():
     print("开始使用Nuitka编译...")
     print("=" * 60)
     
-    # Nuitka编译参数
+    # 检查并转换图标
+    icon_path = Path('resources/icon.ico')
+    if not icon_path.exists():
+        print("\n正在准备图标文件...")
+        convert_png_to_ico()
+    
+    # Nuitka编译参数（非独立模式，启动更快）
     nuitka_args = [
+        sys.executable,
+        '-m',
         'nuitka',
-        '--standalone',                    # 独立模式，包含所有依赖
-        '--onefile',                       # 单文件模式
         '--windows-disable-console',       # Windows下隐藏控制台窗口（GUI程序）
         '--enable-plugin=pyside6',         # 启用PySide6插件
-        '--include-package=speedtest',     # 包含speedtest包
-        '--include-package=requests',      # 包含requests包
-        '--include-package=pyperclip',     # 包含pyperclip包
-        '--include-package=urllib3',       # 包含urllib3包
-        '--include-package=certifi',       # 包含certifi包
-        '--include-package=charset_normalizer',  # 包含charset_normalizer包
-        '--include-package=idna',          # 包含idna包
         '--follow-imports',                # 跟踪所有导入
         '--assume-yes-for-downloads',      # 自动下载依赖
         '--output-dir=dist',               # 输出目录
-        '--output-filename=InternetSpeedTest.exe',  # 输出文件名
         '--company-name=PengCunfu',        # 公司名称
         '--product-name=Internet Speed Test Tool',  # 产品名称
         '--file-version=1.0.0.0',          # 文件版本
         '--product-version=1.0.0',         # 产品版本
         '--file-description=Internet Speed Test Tool - 网速测试工具',  # 文件描述
         '--copyright=Copyright (c) 2024',  # 版权信息
-        '--windows-icon-from-ico=icon.ico' if os.path.exists('icon.ico') else '',  # 图标（如果存在）
-        'main.py'                          # 入口文件
     ]
+    
+    # 添加图标参数（如果存在）
+    if icon_path.exists():
+        nuitka_args.append(f'--windows-icon-from-ico={icon_path}')
+        print(f"✓ 使用图标: {icon_path}")
+    
+    # 添加入口文件
+    nuitka_args.append('main.py')
     
     # 移除空字符串参数
     nuitka_args = [arg for arg in nuitka_args if arg]
@@ -86,12 +123,22 @@ def build_exe():
         print("=" * 60)
         
         # 检查输出文件
-        exe_path = Path('dist') / 'InternetSpeedTest.exe'
+        exe_path = Path('dist') / 'main.exe'
         if exe_path.exists():
-            size_mb = exe_path.stat().st_size / (1024 * 1024)
+            # 重命名为InternetSpeedTest.exe
+            final_path = Path('dist') / 'InternetSpeedTest.exe'
+            if final_path.exists():
+                final_path.unlink()
+            exe_path.rename(final_path)
+            
+            size_mb = final_path.stat().st_size / (1024 * 1024)
             print(f"\n生成的exe文件:")
-            print(f"  路径: {exe_path.absolute()}")
+            print(f"  路径: {final_path.absolute()}")
             print(f"  大小: {size_mb:.2f} MB")
+            print(f"\n注意: 非独立模式需要Python环境才能运行")
+            print(f"  - 启动速度更快")
+            print(f"  - 文件体积更小")
+            print(f"  - 需要在有Python环境的机器上运行")
             return True
         else:
             print("\n✗ 未找到生成的exe文件")
@@ -126,8 +173,8 @@ def main():
         print("\n编译完成！可以在 dist 目录中找到生成的exe文件。")
         print("\n提示:")
         print("  1. 首次运行可能需要较长时间（下载依赖）")
-        print("  2. 生成的exe文件可以在没有Python环境的Windows系统上运行")
-        print("  3. 如果需要添加图标，请将icon.ico文件放在项目根目录")
+        print("  2. 非独立模式：启动快，但需要Python环境")
+        print("  3. 图标已集成到exe文件中")
         return 0
     else:
         print("\n编译失败，请检查错误信息。")
