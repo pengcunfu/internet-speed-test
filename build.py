@@ -81,11 +81,12 @@ def build_exe():
         print("\n正在准备图标文件...")
         convert_png_to_ico()
     
-    # Nuitka编译参数（非独立模式，启动更快）
+    # Nuitka编译参数（独立模式，但不打包成单文件，启动更快）
     nuitka_args = [
         sys.executable,
         '-m',
         'nuitka',
+        '--standalone',                    # 独立模式，包含所有依赖
         '--windows-disable-console',       # Windows下隐藏控制台窗口（GUI程序）
         '--enable-plugin=pyside6',         # 启用PySide6插件
         '--follow-imports',                # 跟踪所有导入
@@ -122,26 +123,36 @@ def build_exe():
         print("✓ 编译成功！")
         print("=" * 60)
         
-        # 检查输出文件
-        exe_path = Path('dist') / 'main.exe'
+        # 检查输出文件（standalone模式会生成main.dist文件夹）
+        dist_folder = Path('dist') / 'main.dist'
+        exe_path = dist_folder / 'main.exe'
+        
         if exe_path.exists():
             # 重命名为InternetSpeedTest.exe
-            final_path = Path('dist') / 'InternetSpeedTest.exe'
+            final_path = dist_folder / 'InternetSpeedTest.exe'
             if final_path.exists():
                 final_path.unlink()
             exe_path.rename(final_path)
             
             size_mb = final_path.stat().st_size / (1024 * 1024)
+            
+            # 计算整个文件夹大小
+            total_size = sum(f.stat().st_size for f in dist_folder.rglob('*') if f.is_file())
+            total_size_mb = total_size / (1024 * 1024)
+            
             print(f"\n生成的exe文件:")
-            print(f"  路径: {final_path.absolute()}")
-            print(f"  大小: {size_mb:.2f} MB")
-            print(f"\n注意: 非独立模式需要Python环境才能运行")
-            print(f"  - 启动速度更快")
-            print(f"  - 文件体积更小")
-            print(f"  - 需要在有Python环境的机器上运行")
+            print(f"  主程序: {final_path.absolute()}")
+            print(f"  主程序大小: {size_mb:.2f} MB")
+            print(f"  总大小（含依赖）: {total_size_mb:.2f} MB")
+            print(f"\n注意: 独立模式（非单文件）")
+            print(f"  ✓ 启动速度快（无需解压）")
+            print(f"  ✓ 无需Python环境")
+            print(f"  ✓ 可以直接运行 {final_path.name}")
+            print(f"  - 需要分发整个 main.dist 文件夹")
             return True
         else:
             print("\n✗ 未找到生成的exe文件")
+            print(f"  预期路径: {exe_path}")
             return False
             
     except subprocess.CalledProcessError as e:
@@ -170,11 +181,12 @@ def main():
     
     # 开始编译
     if build_exe():
-        print("\n编译完成！可以在 dist 目录中找到生成的exe文件。")
+        print("\n编译完成！可以在 dist/main.dist 目录中找到生成的exe文件。")
         print("\n提示:")
-        print("  1. 首次运行可能需要较长时间（下载依赖）")
-        print("  2. 非独立模式：启动快，但需要Python环境")
+        print("  1. 首次编译需要较长时间（下载依赖）")
+        print("  2. 独立模式：启动快速，无需Python环境")
         print("  3. 图标已集成到exe文件中")
+        print("  4. 分发时需要打包整个 main.dist 文件夹")
         return 0
     else:
         print("\n编译失败，请检查错误信息。")
