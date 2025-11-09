@@ -171,12 +171,12 @@ class SimpleSpeedTest:
             
         return 0.0
         
-    def test_upload(self, test_size_mb: int = 1) -> Optional[float]:
+    def test_upload(self, test_size_mb: int = 100) -> Optional[float]:
         """
         测试上传速度
         
         Args:
-            test_size_mb: 测试数据大小(MB)，默认1MB（如果有下载数据则使用下载数据）
+            test_size_mb: 测试数据大小(MB)，默认100MB（如果有下载数据则使用下载数据）
             
         Returns:
             Optional[float]: 上传速度(Mbps)
