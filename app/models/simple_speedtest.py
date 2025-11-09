@@ -68,58 +68,50 @@ class SimpleSpeedTest:
         
     def test_download(self, test_duration: int = 10) -> Optional[float]:
         """
-        测试下载速度
+        测试下载速度（限时测试）
         
         Args:
-            test_duration: 测试持续时间（秒）
+            test_duration: 测试持续时间（秒），默认10秒
             
         Returns:
             Optional[float]: 下载速度(Mbps)
         """
-        self._log(f"[下载测试] 开始测试下载速度...")
+        self._log(f"[下载测试] 开始测试下载速度（限时{test_duration}秒）...")
         
-        # 使用多个URL测试
-        speeds = []
-        
-        for url, size, name in self.TEST_URLS['download'][:3]:  # 使用前3个URL
+        # 单次测试即可，使用第一个可用的URL
+        speed = 0
+        for url, size, name in self.TEST_URLS['download'][:3]:  # 尝试前3个URL
             try:
                 self._log(f"[下载测试] 正在从 {name} 下载测试...")
                 speed = self._test_download_single(url, test_duration)
                 if speed > 0:
-                    speeds.append(speed)
-                    self._log(f"[下载测试] {name}: {speed:.2f} Mbps")
+                    break  # 成功就退出
             except Exception as e:
                 self._log(f"[下载测试] {name} 测试失败: {e}")
                 continue
         
-        if speeds:
-            # 计算统计信息
-            avg_speed = sum(speeds) / len(speeds)
-            max_speed = max(speeds)
-            min_speed = min(speeds)
-            
-            self.download_speed = round(avg_speed, 3)
-            self.download_stats = {
-                'max': round(max_speed, 3),
-                'min': round(min_speed, 3),
-                'avg': round(avg_speed, 3),
-                'speeds': speeds
-            }
-            
-            # 显示详细统计
-            self._log(f"[下载测试] ========== 下载速度统计 ==========")
-            self._log(f"[下载测试] 最高速度: {max_speed:.2f} Mbps ({max_speed / 8:.2f} MB/s)")
-            self._log(f"[下载测试] 最低速度: {min_speed:.2f} Mbps ({min_speed / 8:.2f} MB/s)")
-            self._log(f"[下载测试] 平均速度: {avg_speed:.2f} Mbps ({avg_speed / 8:.2f} MB/s)")
-            self._log(f"[下载测试] =====================================")
-            return self.download_speed
-        else:
+        if speed <= 0:
             self._log(f"[下载测试] 所有测试都失败")
             return None
+        
+        # 保存结果（单次测试）
+        self.download_speed = round(speed, 3)
+        self.download_stats = {
+            'max': round(speed, 3),
+            'min': round(speed, 3),
+            'avg': round(speed, 3),
+            'speeds': [speed]
+        }
+        
+        # 显示最终统计
+        self._log(f"[下载测试] ========== 下载速度统计 ==========")
+        self._log(f"[下载测试] 平均速度: {speed:.2f} Mbps ({speed / 8:.2f} MB/s)")
+        self._log(f"[下载测试] =====================================")
+        return self.download_speed
             
     def _test_download_single(self, url: str, duration: int = 10) -> float:
         """
-        单个URL下载测试
+        单个URL下载测试（限时，实时显示速度）
         
         Args:
             url: 测试URL
@@ -131,6 +123,8 @@ class SimpleSpeedTest:
         start_time = time.time()
         downloaded = 0
         downloaded_chunks = []  # 保存下载的数据块
+        last_log_time = start_time
+        last_downloaded = 0
         
         try:
             # 添加User-Agent避免被拦截
@@ -145,6 +139,17 @@ class SimpleSpeedTest:
                     downloaded += len(chunk)
                     downloaded_chunks.append(chunk)  # 保存数据块
                     
+                    # 每秒显示一次速度
+                    current_time = time.time()
+                    if current_time - last_log_time >= 1.0:
+                        elapsed = current_time - start_time
+                        bytes_in_second = downloaded - last_downloaded
+                        speed_mbps = (bytes_in_second * 8) / (current_time - last_log_time) / 1_000_000
+                        avg_speed_mbps = (downloaded * 8) / elapsed / 1_000_000
+                        self._log(f"[下载测试] 第{int(elapsed)}秒: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) | 平均: {avg_speed_mbps:.2f} Mbps")
+                        last_log_time = current_time
+                        last_downloaded = downloaded
+                    
                 # 检查是否超时
                 elapsed = time.time() - start_time
                 if elapsed >= duration:
@@ -156,8 +161,9 @@ class SimpleSpeedTest:
                 self._downloaded_data = b''.join(downloaded_chunks)
                 self._log(f"[下载测试] 已保存 {len(self._downloaded_data) / (1024*1024):.2f} MB 数据用于上传测试")
                 
-                # 计算速度: (字节数 * 8) / 时间 / 1,000,000 = Mbps
+                # 计算最终平均速度
                 speed_mbps = (downloaded * 8) / elapsed / 1_000_000
+                self._log(f"[下载测试] 完成: 平均 {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 下载了 {downloaded / (1024*1024):.2f} MB")
                 return speed_mbps
             
         except requests.exceptions.Timeout:
