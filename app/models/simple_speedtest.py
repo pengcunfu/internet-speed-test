@@ -105,7 +105,7 @@ class SimpleSpeedTest:
         
         # 显示最终统计
         self._log(f"[下载测试] ========== 下载速度统计 ==========")
-        self._log(f"[下载测试] 平均速度: {speed:.2f} Mbps ({speed / 8:.2f} MB/s)")
+        self._log(f"[下载测试] 平均速度: {speed / 8:.2f} MB/s")
         self._log(f"[下载测试] =====================================")
         return self.download_speed
             
@@ -146,7 +146,7 @@ class SimpleSpeedTest:
                         bytes_in_second = downloaded - last_downloaded
                         speed_mbps = (bytes_in_second * 8) / (current_time - last_log_time) / 1_000_000
                         avg_speed_mbps = (downloaded * 8) / elapsed / 1_000_000
-                        self._log(f"[下载测试] 第{int(elapsed)}秒: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) | 平均: {avg_speed_mbps:.2f} Mbps")
+                        self._log(f"[下载测试] 第{int(elapsed)}秒: {speed_mbps / 8:.2f} MB/s | 平均: {avg_speed_mbps / 8:.2f} MB/s")
                         last_log_time = current_time
                         last_downloaded = downloaded
                     
@@ -163,7 +163,7 @@ class SimpleSpeedTest:
                 
                 # 计算最终平均速度
                 speed_mbps = (downloaded * 8) / elapsed / 1_000_000
-                self._log(f"[下载测试] 完成: 平均 {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 下载了 {downloaded / (1024*1024):.2f} MB")
+                self._log(f"[下载测试] 完成: 平均 {speed_mbps / 8:.2f} MB/s - 下载了 {downloaded / (1024*1024):.2f} MB")
                 return speed_mbps
             
         except requests.exceptions.Timeout:
@@ -223,7 +223,7 @@ class SimpleSpeedTest:
                             bytes_in_second = uploaded_bytes - last_uploaded
                             speed_mbps = (bytes_in_second * 8) / (current_time - last_log_time) / 1_000_000
                             avg_speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                            self._log(f"[上传测试] 第{int(elapsed)}秒: {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) | 平均: {avg_speed_mbps:.2f} Mbps")
+                            self._log(f"[上传测试] 第{int(elapsed)}秒: {speed_mbps / 8:.2f} MB/s | 平均: {avg_speed_mbps / 8:.2f} MB/s")
                             last_log_time = current_time
                             last_uploaded = uploaded_bytes
                         
@@ -236,7 +236,7 @@ class SimpleSpeedTest:
                 if elapsed > 0 and uploaded_bytes > 0:
                     # 计算最终平均速度
                     speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                    self._log(f"[上传测试] {name} 完成: 平均 {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
+                    self._log(f"[上传测试] {name} 完成: 平均 {speed_mbps / 8:.2f} MB/s - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
                     return speed_mbps
                     
             except requests.exceptions.Timeout:
@@ -244,7 +244,7 @@ class SimpleSpeedTest:
                 elapsed = time.time() - start_time
                 if elapsed > 0 and uploaded_bytes > 0:
                     speed_mbps = (uploaded_bytes * 8) / elapsed / 1_000_000
-                    self._log(f"[上传测试] {name} 限时完成: 平均 {speed_mbps:.2f} Mbps ({speed_mbps / 8:.2f} MB/s) - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
+                    self._log(f"[上传测试] {name} 限时完成: 平均 {speed_mbps / 8:.2f} MB/s - 上传了 {uploaded_bytes / (1024*1024):.2f} MB")
                     return speed_mbps
             except Exception as e:
                 self._log(f"[上传测试] {name} 测试失败: {e}")
@@ -288,7 +288,7 @@ class SimpleSpeedTest:
         
         # 显示最终统计
         self._log(f"[上传测试] ========== 上传速度统计 ==========")
-        self._log(f"[上传测试] 平均速度: {speed:.2f} Mbps ({speed / 8:.2f} MB/s)")
+        self._log(f"[上传测试] 平均速度: {speed / 8:.2f} MB/s")
         self._log(f"[上传测试] =====================================")
         return self.upload_speed
             

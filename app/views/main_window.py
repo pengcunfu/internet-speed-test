@@ -339,20 +339,20 @@ class MainWindow(QMainWindow):
             lines.append("📥 下载速度:")
             if 'download_stats' in result:
                 stats = result['download_stats']
-                lines.append(f"  最高: {stats['max']:.2f} Mbps ({stats['max']/8:.2f} MB/s)")
-                lines.append(f"  最低: {stats['min']:.2f} Mbps ({stats['min']/8:.2f} MB/s)")
-                lines.append(f"  平均: {stats['avg']:.2f} Mbps ({stats['avg']/8:.2f} MB/s)")
+                lines.append(f"  最高: {stats['max']/8:.2f} MB/s")
+                lines.append(f"  最低: {stats['min']/8:.2f} MB/s")
+                lines.append(f"  平均: {stats['avg']/8:.2f} MB/s")
             else:
-                lines.append(f"  {result['download']:.2f} Mbps ({result['download']/8:.2f} MB/s)")
+                lines.append(f"  {result['download']/8:.2f} MB/s")
             lines.append("")
             lines.append("📤 上传速度:")
             if 'upload_stats' in result:
                 stats = result['upload_stats']
-                lines.append(f"  最高: {stats['max']:.2f} Mbps ({stats['max']/8:.2f} MB/s)")
-                lines.append(f"  最低: {stats['min']:.2f} Mbps ({stats['min']/8:.2f} MB/s)")
-                lines.append(f"  平均: {stats['avg']:.2f} Mbps ({stats['avg']/8:.2f} MB/s)")
+                lines.append(f"  最高: {stats['max']/8:.2f} MB/s")
+                lines.append(f"  最低: {stats['min']/8:.2f} MB/s")
+                lines.append(f"  平均: {stats['avg']/8:.2f} MB/s")
             else:
-                lines.append(f"  {result['upload']:.2f} Mbps ({result['upload']/8:.2f} MB/s)")
+                lines.append(f"  {result['upload']/8:.2f} MB/s")
             lines.append("=" * 50)
         elif 'download' in result:
             lines.append("下载速度测试完成！\n")
@@ -360,11 +360,11 @@ class MainWindow(QMainWindow):
             lines.append("📥 下载速度:")
             if 'download_stats' in result:
                 stats = result['download_stats']
-                lines.append(f"  最高: {stats['max']:.2f} Mbps ({stats['max']/8:.2f} MB/s)")
-                lines.append(f"  最低: {stats['min']:.2f} Mbps ({stats['min']/8:.2f} MB/s)")
-                lines.append(f"  平均: {stats['avg']:.2f} Mbps ({stats['avg']/8:.2f} MB/s)")
+                lines.append(f"  最高: {stats['max']/8:.2f} MB/s")
+                lines.append(f"  最低: {stats['min']/8:.2f} MB/s")
+                lines.append(f"  平均: {stats['avg']/8:.2f} MB/s")
             else:
-                lines.append(f"  {result['download']:.2f} Mbps ({result['download']/8:.2f} MB/s)")
+                lines.append(f"  {result['download']/8:.2f} MB/s")
             lines.append("=" * 50)
         elif 'upload' in result:
             lines.append("上传速度测试完成！\n")
@@ -372,11 +372,11 @@ class MainWindow(QMainWindow):
             lines.append("📤 上传速度:")
             if 'upload_stats' in result:
                 stats = result['upload_stats']
-                lines.append(f"  最高: {stats['max']:.2f} Mbps ({stats['max']/8:.2f} MB/s)")
-                lines.append(f"  最低: {stats['min']:.2f} Mbps ({stats['min']/8:.2f} MB/s)")
-                lines.append(f"  平均: {stats['avg']:.2f} Mbps ({stats['avg']/8:.2f} MB/s)")
+                lines.append(f"  最高: {stats['max']/8:.2f} MB/s")
+                lines.append(f"  最低: {stats['min']/8:.2f} MB/s")
+                lines.append(f"  平均: {stats['avg']/8:.2f} MB/s")
             else:
-                lines.append(f"  {result['upload']:.2f} Mbps ({result['upload']/8:.2f} MB/s)")
+                lines.append(f"  {result['upload']/8:.2f} MB/s")
             lines.append("=" * 50)
         elif 'ping' in result:
             lines.append("Ping测试完成！\n")

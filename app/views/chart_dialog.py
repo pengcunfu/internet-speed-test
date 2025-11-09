@@ -51,12 +51,12 @@ class SpeedChartCanvas(FigureCanvas):
         for bar, speed in zip(bars, speeds):
             height = bar.get_height()
             ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{speed:.2f} Mbps\n({speed/8:.2f} MB/s)',
+                   f'{speed/8:.2f} MB/s',
                    ha='center', va='bottom', fontsize=12, fontweight='bold')
         
         # 设置标题和标签
         ax.set_title('网速测试结果', fontsize=16, fontweight='bold', pad=20)
-        ax.set_ylabel('速度 (Mbps)', fontsize=12)
+        ax.set_ylabel('速度 (MB/s)', fontsize=12)
         ax.set_ylim(0, max(speeds) * 1.3)
         
         # 网格
@@ -168,7 +168,7 @@ class SpeedChartCanvas(FigureCanvas):
                    ha='center', va='center', fontsize=10)
         
         # 中心文字
-        ax.text(0, 0, f'{speed:.1f}\nMbps', 
+        ax.text(0, 0, f'{speed/8:.1f}\nMB/s', 
                ha='center', va='center', fontsize=16, fontweight='bold')
         
         ax.set_ylim(0, 1.2)
