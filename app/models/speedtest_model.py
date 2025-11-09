@@ -68,49 +68,65 @@ class SpeedTestModel:
             
         try:
             if use_china_servers:
-                print(f"[测速服务器] 使用预配置的 {len(self.CHINA_SERVERS)} 个国内服务器...")
-                # 使用预配置的国内服务器ID
-                self._speedtest_instance.get_servers(self.CHINA_SERVERS)
-                
-                if hasattr(self._speedtest_instance, 'servers') and self._speedtest_instance.servers:
-                    server_count = sum(len(s) for s in self._speedtest_instance.servers.values())
-                    print(f"[测速服务器] 成功加载 {server_count} 个国内服务器")
+                print(f"[测速服务器] 尝试使用预配置的 {len(self.CHINA_SERVERS)} 个国内服务器...")
+                try:
+                    # 使用预配置的国内服务器ID
+                    self._speedtest_instance.get_servers(self.CHINA_SERVERS)
                     
-                    # 显示可用的服务器
-                    for distance, servers in list(self._speedtest_instance.servers.items())[:3]:
-                        for server in servers[:2]:  # 每个距离显示最多2个
-                            print(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')})")
-                    
-                    return True
-                else:
-                    print(f"[测速服务器] 预配置服务器不可用，尝试自动获取...")
+                    if hasattr(self._speedtest_instance, 'servers') and self._speedtest_instance.servers:
+                        server_count = sum(len(s) for s in self._speedtest_instance.servers.values())
+                        if server_count > 0:
+                            print(f"[测速服务器] 成功加载 {server_count} 个国内服务器")
+                            
+                            # 显示可用的服务器
+                            shown = 0
+                            for distance, servers in sorted(self._speedtest_instance.servers.items()):
+                                for server in servers:
+                                    if shown < 5:  # 显示前5个
+                                        print(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
+                                        shown += 1
+                            
+                            return True
+                except Exception as e:
+                    print(f"[测速服务器] 预配置服务器加载失败: {e}")
             
             # 如果预配置失败或不使用，则自动获取
             print(f"[测速服务器] 正在自动获取服务器列表...")
-            self._speedtest_instance.get_servers()
+            self._speedtest_instance.get_servers([])  # 获取所有服务器
             
-            if hasattr(self._speedtest_instance, 'servers'):
+            if hasattr(self._speedtest_instance, 'servers') and self._speedtest_instance.servers:
                 all_servers = self._speedtest_instance.servers
                 total_count = sum(len(s) for s in all_servers.values())
                 print(f"[测速服务器] 获取到 {total_count} 个服务器")
                 
-                # 尝试筛选中国服务器
+                # 尝试筛选中国和香港服务器
                 filtered_servers = {}
                 for key, servers in all_servers.items():
-                    country_servers = [s for s in servers if s.get('cc', '') == 'CN']
+                    # 包含中国大陆和香港的服务器
+                    country_servers = [s for s in servers if s.get('cc', '') in ['CN', 'HK']]
                     if country_servers:
                         filtered_servers[key] = country_servers
                 
                 if filtered_servers:
                     cn_count = sum(len(s) for s in filtered_servers.values())
                     self._speedtest_instance.servers = filtered_servers
-                    print(f"[测速服务器] 已筛选到 {cn_count} 个中国服务器")
+                    print(f"[测速服务器] 已筛选到 {cn_count} 个中国/香港服务器")
+                    
+                    # 显示部分服务器
+                    shown = 0
+                    for distance, servers in sorted(filtered_servers.items()):
+                        for server in servers:
+                            if shown < 5:
+                                print(f"  - {server.get('sponsor', '未知')} ({server.get('name', '未知')}, {server.get('country', '未知')})")
+                                shown += 1
                 else:
                     print(f"[测速服务器] 未找到中国服务器，使用全球服务器")
             
             return True
         except Exception as e:
             print(f"[测速服务器] 获取服务器列表失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
             
     def select_best_server(self) -> Optional[Dict]:
