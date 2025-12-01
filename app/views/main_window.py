@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QGridLayout, QPushButton, QLabel, QInputDialog, 
                                QMessageBox, QMenu, QApplication)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QPalette, QColor, QIcon
+from PySide6.QtGui import QIcon
 from ..controllers.speedtest_controller import SpeedTestController
 from ..controllers.ip_controller import IPController
 from .result_dialog import ResultDialog
@@ -76,29 +76,17 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # 设置背景色
-        palette = QPalette()
-        palette.setColor(QPalette.Window, QColor(240, 240, 240))
-        central_widget.setPalette(palette)
-        central_widget.setAutoFillBackground(True)
-        
         # 创建主布局
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(30, 30, 30, 30)
-        
+
         # 标题
         title_label = QLabel("网速测试工具")
-        title_font = QFont()
-        title_font.setPointSize(16)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
-        title_label.setStyleSheet("color: #323296;")
         title_label.setAlignment(Qt.AlignCenter)
-        
+
         # 说明文字
         desc_label = QLabel("选择测试类型，点击按钮开始测试")
-        desc_label.setStyleSheet("color: #646464;")
         desc_label.setAlignment(Qt.AlignCenter)
         
         # 创建按钮网格布局
@@ -112,39 +100,12 @@ class MainWindow(QMainWindow):
         self.ping_btn = QPushButton("Ping 测试")
         self.ip_info_btn = QPushButton("IP 信息")
         
-        # 设置按钮样式
-        button_style = """
-        QPushButton {
-            font-size: 12px;
-            font-weight: bold;
-            padding: 10px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-        }
-        QPushButton:hover {
-            border: 2px solid #ffffff;
-        }
-        QPushButton:pressed {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        QPushButton:disabled {
-            background-color: #cccccc;
-            color: #888888;
-        }
-        """
-        
-        # 设置按钮样式和大小
-        buttons = [
-            (self.download_btn, "#64b464"),  # 绿色
-            (self.upload_btn, "#6496dc"),   # 蓝色
-            (self.both_btn, "#dc9664"),     # 橙色
-            (self.ping_btn, "#c864c8"),     # 紫色
-            (self.ip_info_btn, "#96c8c8")   # 青色
-        ]
-        
-        for btn, color in buttons:
-            btn.setFixedSize(150, 50)
-            btn.setStyleSheet(button_style + f"QPushButton {{ background-color: {color}; color: white; }}")
+        # 设置按钮大小
+        self.download_btn.setFixedSize(150, 50)
+        self.upload_btn.setFixedSize(150, 50)
+        self.both_btn.setFixedSize(150, 50)
+        self.ping_btn.setFixedSize(150, 50)
+        self.ip_info_btn.setFixedSize(150, 50)
         
         # 添加按钮到网格
         button_layout.addWidget(self.download_btn, 0, 0)
@@ -160,27 +121,6 @@ class MainWindow(QMainWindow):
         self.help_btn = QPushButton("帮助")
         self.close_btn = QPushButton("退出")
         
-        # 设置底部按钮样式
-        bottom_button_style = """
-        QPushButton {
-            font-size: 11px;
-            padding: 8px 16px;
-            border-radius: 6px;
-            background-color: #e0e0e0;
-            border: 1px solid #c0c0c0;
-        }
-        QPushButton:hover {
-            background-color: #d0d0d0;
-        }
-        QPushButton:pressed {
-            background-color: #c0c0c0;
-        }
-        """
-        
-        self.network_info_btn.setStyleSheet(bottom_button_style)
-        self.chart_btn.setStyleSheet(bottom_button_style)
-        self.help_btn.setStyleSheet(bottom_button_style)
-        self.close_btn.setStyleSheet(bottom_button_style)
         self.chart_btn.setEnabled(False)  # 初始禁用
         
         bottom_layout.addWidget(self.network_info_btn)

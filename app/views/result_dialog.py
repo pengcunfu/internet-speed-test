@@ -8,7 +8,6 @@ import pyperclip
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QTextEdit, QPushButton, QMessageBox)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QPalette, QColor
 
 
 class ResultDialog(QDialog):
@@ -42,12 +41,6 @@ class ResultDialog(QDialog):
         
     def _init_ui(self):
         """初始化用户界面"""
-        # 设置背景色
-        palette = QPalette()
-        palette.setColor(QPalette.Window, QColor(250, 250, 250))
-        self.setPalette(palette)
-        self.setAutoFillBackground(True)
-        
         # 主布局
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(15)
@@ -55,68 +48,17 @@ class ResultDialog(QDialog):
         
         # 标题
         self.title_label = QLabel("正在加载，请稍候...")
-        title_font = QFont()
-        title_font.setPointSize(12)
-        title_font.setBold(True)
-        self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("color: #323296;")
         self.title_label.setAlignment(Qt.AlignCenter)
         
         # 信息显示区域
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
-        self.info_text.setStyleSheet("""
-            QTextEdit {
-                background-color: white;
-                border: 2px solid #e0e0e0;
-                border-radius: 8px;
-                padding: 10px;
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 11px;
-                line-height: 1.4;
-            }
-        """)
         
         # 按钮区域
         button_layout = QHBoxLayout()
         
         self.copy_btn = QPushButton("复制信息")
         self.close_btn = QPushButton("关闭")
-        
-        # 设置按钮样式
-        button_style = """
-        QPushButton {
-            font-size: 11px;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-        QPushButton:hover {
-            background-color: #d0d0d0;
-        }
-        QPushButton:pressed {
-            background-color: #c0c0c0;
-        }
-        """
-        
-        self.copy_btn.setStyleSheet(button_style + """
-            QPushButton {
-                background-color: #64b464;
-                color: white;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #5aa45a;
-            }
-        """)
-        
-        self.close_btn.setStyleSheet(button_style + """
-            QPushButton {
-                background-color: #e0e0e0;
-                color: #333;
-                border: 1px solid #c0c0c0;
-            }
-        """)
         
         button_layout.addWidget(self.copy_btn)
         button_layout.addStretch()
